@@ -13,6 +13,11 @@ class CeoDashboard extends Dashboard
     protected static ?string $title           = 'CEO Dashboard';
     protected static ?int $navigationSort     = 1;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['ceo', 'coo']);
+    }
+
     public function getWidgets(): array
     {
         return [

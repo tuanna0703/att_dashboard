@@ -50,6 +50,10 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->homeUrl(fn (): string => match (true) {
+                auth()->user()?->hasAnyRole(['ceo', 'coo']) => '/admin',
+                default => '/admin/finance',
+            });
     }
 }

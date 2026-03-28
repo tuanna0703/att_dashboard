@@ -15,6 +15,11 @@ class FinanceDashboard extends Dashboard
     protected static ?string $title            = 'Finance Dashboard';
     protected static ?int $navigationSort      = 2;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()->hasAnyRole(['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff']);
+    }
+
     public function getWidgets(): array
     {
         return [
