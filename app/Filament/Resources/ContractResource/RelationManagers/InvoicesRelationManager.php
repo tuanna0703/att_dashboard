@@ -64,8 +64,10 @@ class InvoicesRelationManager extends RelationManager
             ->defaultSort('invoice_date', 'desc')
             ->headerActions([Tables\Actions\CreateAction::make()])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ]),
             ]);
     }
 }

@@ -103,8 +103,10 @@ class PaymentSchedulesRelationManager extends RelationManager
             ->defaultSort('installment_no')
             ->headerActions([Tables\Actions\CreateAction::make()])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ]),
             ]);
     }
 }
