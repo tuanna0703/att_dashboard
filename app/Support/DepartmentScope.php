@@ -45,7 +45,9 @@ class DepartmentScope
 
     /**
      * Scope Customer query theo dept của user.
-     * Customer được liên kết qua contracts.finance_owner.
+     * Customer là dữ liệu danh mục dùng chung trong phòng ban.
+     * finance_manager/staff xem toàn bộ customers — không scope theo contract.
+     * Chỉ Vice CEO bị giới hạn theo dept phụ trách.
      */
     public static function customers(Builder $query, User $user): Builder
     {
@@ -64,16 +66,9 @@ class DepartmentScope
             });
         }
 
-        if ($user->hasRole('finance_manager')) {
-            return $query->whereHas('contracts.financeOwner', fn ($u) => $u->whereIn('department_id', $deptIds));
-        }
-
-        // staff: khách hàng có contract mình được assign
-        return $query->whereHas('contracts', function ($c) use ($user) {
-            $c->where('finance_owner_id', $user->id)
-              ->orWhere('sale_owner_id', $user->id)
-              ->orWhere('account_owner_id', $user->id);
-        });
+        // finance_manager, finance_staff: xem tất cả customers
+        // Customer là danh mục dùng chung — staff cần tạo KH trước khi gắn hợp đồng
+        return $query;
     }
 
     /**
