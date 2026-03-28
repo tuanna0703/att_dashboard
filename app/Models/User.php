@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
@@ -21,16 +22,38 @@ class User extends Authenticatable implements FilamentUser
         return true;
     }
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
     ];
+
+    // ─── Relationships ────────────────────────────────────────────────────────
+
+    public function contractsAsSale(): HasMany
+    {
+        return $this->hasMany(Contract::class, 'sale_owner_id');
+    }
+
+    public function contractsAsAccount(): HasMany
+    {
+        return $this->hasMany(Contract::class, 'account_owner_id');
+    }
+
+    public function contractsAsFinance(): HasMany
+    {
+        return $this->hasMany(Contract::class, 'finance_owner_id');
+    }
+
+    public function paymentSchedules(): HasMany
+    {
+        return $this->hasMany(PaymentSchedule::class, 'responsible_user_id');
+    }
+
+    public function receiptsRecorded(): HasMany
+    {
+        return $this->hasMany(Receipt::class, 'recorded_by');
+    }
 
     /**
      * The attributes that should be hidden for serialization.

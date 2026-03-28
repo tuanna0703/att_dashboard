@@ -12,14 +12,22 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Daily: mark overdue payment schedules
-Schedule::job(new MarkOverdueJob)->dailyAt('00:30');
+// 00:30 — mark overdue schedules (phải chạy trước reminder)
+Schedule::job(new MarkOverdueJob)->dailyAt('00:30')
+    ->name('mark-overdue')
+    ->withoutOverlapping();
 
-// Daily: send internal overdue reminders
-Schedule::job(new SendOverdueReminderJob)->dailyAt('08:00');
+// 08:00 — gửi reminder nội bộ cho các đợt quá hạn
+Schedule::job(new SendOverdueReminderJob)->dailyAt('08:00')
+    ->name('send-overdue-reminder')
+    ->withoutOverlapping();
 
-// Daily: generate upcoming subscription schedules
-Schedule::job(new GenerateSubscriptionSchedulesJob)->dailyAt('01:00');
+// 01:00 — sinh lịch thanh toán cho hợp đồng subscription
+Schedule::job(new GenerateSubscriptionSchedulesJob)->dailyAt('01:00')
+    ->name('generate-subscription-schedules')
+    ->withoutOverlapping();
 
-// Daily: snapshot cashflow metrics for dashboard
-Schedule::job(new DailyCashflowSnapshotJob)->dailyAt('02:00');
+// 02:00 — snapshot cashflow metrics hàng ngày cho dashboard
+Schedule::job(new DailyCashflowSnapshotJob)->dailyAt('02:00')
+    ->name('daily-cashflow-snapshot')
+    ->withoutOverlapping();
