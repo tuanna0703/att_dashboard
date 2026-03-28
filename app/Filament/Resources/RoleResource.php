@@ -70,7 +70,7 @@ class RoleResource extends Resource
                                     Forms\Components\CheckboxList::make('permissions')
                                         ->label('')
                                         ->relationship('permissions', 'name')
-                                        ->options($permissions->pluck('name', 'name'))
+                                        ->options($permissions->pluck('name', 'id'))
                                         ->columns(2)
                                         ->gridDirection('row'),
                                 ]);
