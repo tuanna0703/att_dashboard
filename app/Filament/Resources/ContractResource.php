@@ -6,11 +6,13 @@ use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
 use App\Models\Contract;
 use App\Models\User;
+use App\Support\DepartmentScope;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class ContractResource extends Resource
 {
@@ -191,6 +193,31 @@ class ContractResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return DepartmentScope::contracts(parent::getEloquentQuery(), auth()->user());
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasPermissionTo('contracts.viewAny');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('contracts.create');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('contracts.update');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('contracts.delete');
     }
 
     public static function getRelations(): array

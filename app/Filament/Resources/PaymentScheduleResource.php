@@ -5,11 +5,13 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PaymentScheduleResource\Pages;
 use App\Models\PaymentSchedule;
 use App\Models\User;
+use App\Support\DepartmentScope;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class PaymentScheduleResource extends Resource
 {
@@ -166,6 +168,31 @@ class PaymentScheduleResource extends Resource
                 Tables\Actions\EditAction::make(),
             ])
             ->defaultSort('due_date');
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return DepartmentScope::paymentSchedules(parent::getEloquentQuery(), auth()->user());
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasPermissionTo('payment_schedules.viewAny');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('payment_schedules.create');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('payment_schedules.update');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('payment_schedules.delete');
     }
 
     public static function getPages(): array

@@ -7,6 +7,8 @@ use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -26,9 +28,21 @@ class User extends Authenticatable implements FilamentUser
         'name',
         'email',
         'password',
+        'department_id',
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    /** Các phòng ban Vice CEO này oversee */
+    public function overseenDepartments(): BelongsToMany
+    {
+        return $this->belongsToMany(Department::class, 'user_overseen_departments');
+    }
 
     public function contractsAsSale(): HasMany
     {
@@ -53,6 +67,41 @@ class User extends Authenticatable implements FilamentUser
     public function receiptsRecorded(): HasMany
     {
         return $this->hasMany(Receipt::class, 'recorded_by');
+    }
+
+    // ─── Permission Helpers ───────────────────────────────────────────────────
+
+    /** CEO và COO xem toàn bộ dữ liệu */
+    public function canViewAll(): bool
+    {
+        return $this->hasAnyRole(['ceo', 'coo']);
+    }
+
+    /**
+     * Trả về mảng department_id user được phép xem.
+     * null = không giới hạn (CEO/COO)
+     * []   = không có dept (cần xử lý riêng)
+     *
+     * @return int[]|null
+     */
+    public function getScopedDepartmentIds(): ?array
+    {
+        if ($this->canViewAll()) {
+            return null; // null = all
+        }
+
+        if ($this->hasRole('vice_ceo')) {
+            return $this->overseenDepartments()->pluck('departments.id')->toArray();
+        }
+
+        // finance_manager, finance_staff, department_manager...
+        return $this->department_id ? [$this->department_id] : [];
+    }
+
+    /** User chỉ được xem data của chính mình */
+    public function isStaffLevel(): bool
+    {
+        return !$this->hasAnyRole(['ceo', 'coo', 'vice_ceo', 'finance_manager']);
     }
 
     /**
