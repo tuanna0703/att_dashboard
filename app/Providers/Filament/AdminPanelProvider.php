@@ -28,6 +28,12 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->sidebarCollapsibleOnDesktop()
+            ->navigationGroups([
+                'Hợp đồng',
+                'Công nợ',
+                'Danh mục',
+                'Quản trị hệ thống',
+            ])
             ->colors([
                 'primary' => Color::Blue,
             ])

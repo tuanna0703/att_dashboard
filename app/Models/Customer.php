@@ -28,6 +28,11 @@ class Customer extends Model
         return $this->hasMany(Contract::class);
     }
 
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(CustomerContact::class)->orderByDesc('is_primary')->orderBy('name');
+    }
+
     // ─── Computed / Aggregates ────────────────────────────────────────────────
 
     public function totalOutstanding(): float
