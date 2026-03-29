@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\CashflowSnapshot;
-use App\Services\CollectionService;
+use App\Models\PaymentSchedule;
+use App\Support\DepartmentScope;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -15,46 +15,57 @@ class CashflowStatsWidget extends BaseWidget
 
     protected function getStats(): array
     {
-        $snapshot = CashflowSnapshot::whereDate('snapshot_date', today())->first();
+        $user = auth()->user();
 
-        if ($snapshot) {
-            $ar           = $snapshot->total_ar;
-            $overdue      = $snapshot->total_overdue;
-            $dueMonth     = $snapshot->due_this_month;
-            $forecast     = $snapshot->forecast_30_days;
-            $overdueCount = $snapshot->overdue_count;
-            $dueSoonCount = $snapshot->due_soon_count;
-        } else {
-            /** @var CollectionService $service */
-            $service      = app(CollectionService::class);
-            $ar           = $service->totalAR();
-            $overdueList  = $service->overdueList();
-            $overdue      = $overdueList->sum('amount');
-            $overdueCount = $overdueList->count();
-            $dueMonth     = $service->dueThisMonth();
-            $forecast     = $service->forecastNext30Days();
-            $dueSoonCount = $service->dueSoon(7)->count();
-        }
+        $base = fn () => DepartmentScope::paymentSchedules(PaymentSchedule::query(), $user);
+
+        $ar = $base()
+            ->whereIn('status', ['pending', 'invoiced', 'partially_paid', 'overdue'])
+            ->sum('amount');
+
+        $overdueItems = $base()->where('status', 'overdue')->selectRaw('COUNT(*) as cnt, SUM(amount) as total')->first();
+        $overdue      = (float) ($overdueItems->total ?? 0);
+        $overdueCount = (int) ($overdueItems->cnt ?? 0);
+
+        $dueMonth = $base()
+            ->whereIn('status', ['pending', 'invoiced', 'partially_paid', 'overdue'])
+            ->whereBetween('due_date', [now()->startOfMonth(), now()->endOfMonth()])
+            ->sum('amount');
+
+        $forecast = $base()
+            ->whereIn('status', ['pending', 'invoiced'])
+            ->whereBetween('due_date', [today(), today()->addDays(30)])
+            ->sum('amount');
+
+        $dueSoonCount = $base()
+            ->whereIn('status', ['pending', 'invoiced'])
+            ->whereBetween('due_date', [today(), today()->addDays(7)])
+            ->count();
 
         return [
             Stat::make('Tổng AR', number_format((float) $ar, 0, ',', '.') . ' ₫')
-                ->description('Công nợ chưa thu')
+                ->description('Công nợ chưa thu — Xem chi tiết')
                 ->color('primary')
-                ->icon('heroicon-o-banknotes'),
+                ->icon('heroicon-o-banknotes')
+                ->url('/admin/payment-schedules'),
 
-            Stat::make('Tổng quá hạn', number_format((float) $overdue, 0, ',', '.') . ' ₫')
-                ->description("{$overdueCount} đợt cần xử lý")
+            Stat::make('Tổng quá hạn', number_format($overdue, 0, ',', '.') . ' ₫')
+                ->description("{$overdueCount} đợt cần xử lý — Xem danh sách")
                 ->color('danger')
-                ->icon('heroicon-o-exclamation-triangle'),
+                ->icon('heroicon-o-exclamation-triangle')
+                ->url('/admin/payment-schedules?tableFilters[status][value]=overdue'),
 
             Stat::make('Đến hạn tháng ' . now()->format('m'), number_format((float) $dueMonth, 0, ',', '.') . ' ₫')
+                ->description('Trong tháng này — Xem chi tiết')
                 ->color('warning')
-                ->icon('heroicon-o-calendar-days'),
+                ->icon('heroicon-o-calendar-days')
+                ->url('/admin/payment-schedules?tableFilters[due_this_month][isActive]=true'),
 
             Stat::make('Dự báo 30 ngày tới', number_format((float) $forecast, 0, ',', '.') . ' ₫')
                 ->description("{$dueSoonCount} đợt đến hạn trong 7 ngày")
                 ->color('success')
-                ->icon('heroicon-o-arrow-trending-up'),
+                ->icon('heroicon-o-arrow-trending-up')
+                ->url('/admin/payment-schedules'),
         ];
     }
 }
