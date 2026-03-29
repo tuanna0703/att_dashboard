@@ -14,9 +14,6 @@ class Customer extends Model
         'name',
         'tax_code',
         'address',
-        'contact_name',
-        'contact_email',
-        'contact_phone',
         'credit_rating',
         'status',
     ];

@@ -161,6 +161,11 @@ class PaymentScheduleResource extends Resource
                 Tables\Filters\Filter::make('due_this_month')
                     ->label('Đến hạn tháng này')
                     ->query(fn ($query) => $query->whereBetween('due_date', [now()->startOfMonth(), now()->endOfMonth()])),
+                Tables\Filters\SelectFilter::make('contract')
+                    ->label('Hợp đồng')
+                    ->relationship('contract', 'contract_code')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([

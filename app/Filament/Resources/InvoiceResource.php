@@ -128,6 +128,11 @@ class InvoiceResource extends Resource
                 Tables\Filters\Filter::make('unpaid')
                     ->label('Chưa thu')
                     ->query(fn ($query) => $query->whereNotIn('status', ['paid', 'cancelled'])),
+                Tables\Filters\SelectFilter::make('contract')
+                    ->label('Hợp đồng')
+                    ->relationship('contract', 'contract_code')
+                    ->searchable()
+                    ->preload(),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([

@@ -72,7 +72,9 @@ class DepartmentScope
     }
 
     /**
-     * Scope PaymentSchedule query theo responsible_user.department_id.
+     * Scope PaymentSchedule query theo contract.finance_owner.department_id.
+     * finance_staff được xem toàn bộ trong phòng ban — responsible_user_id là field
+     * operational (ai xử lý), không dùng để giới hạn visibility.
      */
     public static function paymentSchedules(Builder $query, User $user): Builder
     {
@@ -82,12 +84,21 @@ class DepartmentScope
 
         $deptIds = $user->getScopedDepartmentIds();
 
-        if ($user->hasRole('vice_ceo') || $user->hasRole('finance_manager')) {
-            return $query->whereHas('responsibleUser', fn ($u) => $u->whereIn('department_id', $deptIds));
+        if ($user->hasRole('vice_ceo')) {
+            return $query->whereHas('contract', function ($c) use ($deptIds) {
+                $c->where(function ($q) use ($deptIds) {
+                    $q->whereHas('financeOwner', fn ($u) => $u->whereIn('department_id', $deptIds))
+                      ->orWhereHas('saleOwner', fn ($u) => $u->whereIn('department_id', $deptIds));
+                });
+            });
         }
 
-        // staff: chỉ xem schedule mình phụ trách
-        return $query->where('responsible_user_id', $user->id);
+        // finance_manager và finance_staff: xem theo dept qua contract.finance_owner
+        // Bao gồm cả payment schedules chưa assign finance_owner (mới tạo)
+        return $query->where(function ($q) use ($deptIds) {
+            $q->whereHas('contract.financeOwner', fn ($u) => $u->whereIn('department_id', $deptIds))
+              ->orWhereDoesntHave('contract.financeOwner');
+        });
     }
 
     /**
@@ -108,13 +119,10 @@ class DepartmentScope
             });
         }
 
-        if ($user->hasRole('finance_manager')) {
-            return $query->whereHas('contract.financeOwner', fn ($u) => $u->whereIn('department_id', $deptIds));
-        }
-
-        return $query->whereHas('contract', function ($c) use ($user) {
-            $c->where('finance_owner_id', $user->id)
-              ->orWhere('sale_owner_id', $user->id);
+        // finance_manager và finance_staff: xem theo dept, bao gồm invoice chưa assign owner
+        return $query->where(function ($q) use ($deptIds) {
+            $q->whereHas('contract.financeOwner', fn ($u) => $u->whereIn('department_id', $deptIds))
+              ->orWhereDoesntHave('contract.financeOwner');
         });
     }
 
@@ -129,10 +137,14 @@ class DepartmentScope
 
         $deptIds = $user->getScopedDepartmentIds();
 
-        if ($user->hasRole('vice_ceo') || $user->hasRole('finance_manager')) {
+        if ($user->hasRole('vice_ceo')) {
             return $query->whereHas('recordedBy', fn ($u) => $u->whereIn('department_id', $deptIds));
         }
 
-        return $query->where('recorded_by', $user->id);
+        // finance_manager và finance_staff: xem toàn bộ trong dept, bao gồm chưa assign
+        return $query->where(function ($q) use ($deptIds) {
+            $q->whereHas('recordedBy', fn ($u) => $u->whereIn('department_id', $deptIds))
+              ->orWhereDoesntHave('recordedBy');
+        });
     }
 }

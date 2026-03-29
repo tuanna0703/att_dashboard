@@ -50,17 +50,6 @@ class CustomerResource extends Resource
                     ->columnSpan(2),
             ])->columns(2),
 
-            Forms\Components\Section::make('Người liên hệ')->schema([
-                Forms\Components\TextInput::make('contact_name')
-                    ->label('Họ tên'),
-                Forms\Components\TextInput::make('contact_phone')
-                    ->label('Số điện thoại')
-                    ->tel()
-                    ->maxLength(20),
-                Forms\Components\TextInput::make('contact_email')
-                    ->label('Email')
-                    ->email(),
-            ])->columns(3),
         ]);
     }
 
@@ -76,10 +65,6 @@ class CustomerResource extends Resource
                 Tables\Columns\TextColumn::make('tax_code')
                     ->label('MST')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('contact_name')
-                    ->label('Người liên hệ'),
-                Tables\Columns\TextColumn::make('contact_phone')
-                    ->label('Điện thoại'),
                 Tables\Columns\BadgeColumn::make('credit_rating')
                     ->label('Xếp hạng')
                     ->colors([

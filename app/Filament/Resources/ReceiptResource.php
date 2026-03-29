@@ -113,6 +113,10 @@ class ReceiptResource extends Resource
                 Tables\Filters\Filter::make('receipt_date')
                     ->label('Tháng này')
                     ->query(fn ($query) => $query->whereBetween('receipt_date', [now()->startOfMonth(), now()->endOfMonth()])),
+                Tables\Filters\SelectFilter::make('contract')
+                    ->label('Hợp đồng')
+                    ->relationship('paymentSchedule.contract', 'contract_code')
+                    ->searchable(),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([

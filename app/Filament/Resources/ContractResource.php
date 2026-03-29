@@ -10,6 +10,7 @@ use App\Support\DepartmentScope;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -41,6 +42,11 @@ class ContractResource extends Resource
                     ])
                     ->required()
                     ->reactive(),
+                Forms\Components\TextInput::make('name')
+                    ->label('Tên hợp đồng')
+                    ->maxLength(255)
+                    ->columnSpan(2)
+                    ->placeholder('VD: Hợp đồng quảng cáo Q1/2026'),
                 Forms\Components\Select::make('customer_id')
                     ->label('Khách hàng')
                     ->relationship('customer', 'name')
@@ -53,9 +59,11 @@ class ContractResource extends Resource
                 Forms\Components\DatePicker::make('end_date')->label('Ngày kết thúc'),
                 Forms\Components\TextInput::make('total_value_estimated')
                     ->label('Giá trị ước tính')
-                    ->numeric()
-                    ->prefix('VND')
-                    ->required(),
+                    ->required()
+                    ->prefix('₫')
+                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                    ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', $state ?? '0'))
+                    ->formatStateUsing(fn ($state) => $state ? number_format((float) $state, 0, ',', '.') : null),
                 Forms\Components\Select::make('currency')
                     ->label('Tiền tệ')
                     ->options(['VND' => 'VND', 'USD' => 'USD'])
@@ -108,6 +116,11 @@ class ContractResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Tên hợp đồng')
+                    ->searchable()
+                    ->limit(40)
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('customer.name')
                     ->label('Khách hàng')
                     ->searchable()
@@ -188,6 +201,23 @@ class ContractResource extends Resource
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ]),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('payment_schedules')
+                        ->label('Lịch thanh toán')
+                        ->icon('heroicon-o-calendar-days')
+                        ->url(fn (Contract $record): string => '/admin/payment-schedules?tableFilters[contract][value]=' . $record->id),
+                    Tables\Actions\Action::make('invoices')
+                        ->label('Hóa đơn')
+                        ->icon('heroicon-o-document-text')
+                        ->url(fn (Contract $record): string => '/admin/invoices?tableFilters[contract][value]=' . $record->id),
+                    Tables\Actions\Action::make('receipts')
+                        ->label('Phiếu thu')
+                        ->icon('heroicon-o-banknotes')
+                        ->url(fn (Contract $record): string => '/admin/receipts?tableFilters[contract][value]=' . $record->id),
+                ])
+                    ->label('Công nợ')
+                    ->icon('heroicon-o-currency-dollar')
+                    ->color('success'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

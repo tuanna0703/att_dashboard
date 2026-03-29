@@ -13,6 +13,7 @@ class Contract extends Model
 
     protected $fillable = [
         'contract_code',
+        'name',
         'customer_id',
         'contract_type',
         'signed_date',
