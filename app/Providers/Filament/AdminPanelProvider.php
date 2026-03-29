@@ -35,8 +35,12 @@ class AdminPanelProvider extends PanelProvider
                 'Quản trị hệ thống',
             ])
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::hex('#2a4ff6'),
             ])
+            ->brandName('ATT Dashboard')
+            ->brandLogo(asset('images/logo.png'))
+            ->brandLogoHeight('2rem')
+            ->favicon(asset('images/favico.png'))
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
