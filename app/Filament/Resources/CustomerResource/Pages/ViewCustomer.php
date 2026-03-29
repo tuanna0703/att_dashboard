@@ -25,36 +25,38 @@ class ViewCustomer extends ViewRecord
                 ->label('Thêm người liên hệ')
                 ->icon('heroicon-o-user-plus')
                 ->color('primary')
+                ->modalWidth('2xl')
                 ->form([
-                    Forms\Components\TextInput::make('name')
-                        ->label('Họ và tên')
-                        ->required()
-                        ->maxLength(100),
-                    Forms\Components\TextInput::make('title')
-                        ->label('Chức danh')
-                        ->placeholder('Giám đốc, Trưởng phòng...')
-                        ->maxLength(100),
-                    Forms\Components\Select::make('role')
-                        ->label('Vai trò')
-                        ->options(CustomerContact::$roles)
-                        ->required()
-                        ->default('other'),
-                    Forms\Components\Toggle::make('is_primary')
-                        ->label('Người liên hệ chính')
-                        ->default(false),
-                    Forms\Components\TextInput::make('phone')
-                        ->label('Số điện thoại')
-                        ->tel()
-                        ->maxLength(20),
-                    Forms\Components\TextInput::make('email')
-                        ->label('Email')
-                        ->email()
-                        ->maxLength(255),
-                    Forms\Components\Textarea::make('note')
-                        ->label('Ghi chú')
-                        ->columnSpanFull(),
+                    Forms\Components\Grid::make(2)->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Họ và tên')
+                            ->required()
+                            ->maxLength(100),
+                        Forms\Components\TextInput::make('title')
+                            ->label('Chức danh')
+                            ->placeholder('Giám đốc, Trưởng phòng...')
+                            ->maxLength(100),
+                        Forms\Components\Select::make('role')
+                            ->label('Vai trò')
+                            ->options(CustomerContact::$roles)
+                            ->required()
+                            ->default('other'),
+                        Forms\Components\Toggle::make('is_primary')
+                            ->label('Người liên hệ chính')
+                            ->default(false),
+                        Forms\Components\TextInput::make('phone')
+                            ->label('Số điện thoại')
+                            ->tel()
+                            ->maxLength(20),
+                        Forms\Components\TextInput::make('email')
+                            ->label('Email')
+                            ->email()
+                            ->maxLength(255),
+                        Forms\Components\Textarea::make('note')
+                            ->label('Ghi chú')
+                            ->columnSpanFull(),
+                    ]),
                 ])
-                ->columns(2)
                 ->action(function (array $data): void {
                     $this->record->contacts()->create($data);
                     Notification::make()
