@@ -197,27 +197,26 @@ class ContractResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\Action::make('payment_schedules')
+                            ->label('Lịch thanh toán')
+                            ->icon('heroicon-o-calendar-days')
+                            ->url(fn (Contract $record): string => '/admin/payment-schedules?tableFilters[contract][value]=' . $record->id),
+                        Tables\Actions\Action::make('invoices')
+                            ->label('Hóa đơn')
+                            ->icon('heroicon-o-document-text')
+                            ->url(fn (Contract $record): string => '/admin/invoices?tableFilters[contract][value]=' . $record->id),
+                        Tables\Actions\Action::make('receipts')
+                            ->label('Phiếu thu')
+                            ->icon('heroicon-o-banknotes')
+                            ->url(fn (Contract $record): string => '/admin/receipts?tableFilters[contract][value]=' . $record->id),
+                    ])->label('Công nợ'),
+                    Tables\Actions\ActionGroup::make([
+                        Tables\Actions\ViewAction::make(),
+                        Tables\Actions\EditAction::make(),
+                        Tables\Actions\DeleteAction::make(),
+                    ])->label('Thao tác'),
                 ]),
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('payment_schedules')
-                        ->label('Lịch thanh toán')
-                        ->icon('heroicon-o-calendar-days')
-                        ->url(fn (Contract $record): string => '/admin/payment-schedules?tableFilters[contract][value]=' . $record->id),
-                    Tables\Actions\Action::make('invoices')
-                        ->label('Hóa đơn')
-                        ->icon('heroicon-o-document-text')
-                        ->url(fn (Contract $record): string => '/admin/invoices?tableFilters[contract][value]=' . $record->id),
-                    Tables\Actions\Action::make('receipts')
-                        ->label('Phiếu thu')
-                        ->icon('heroicon-o-banknotes')
-                        ->url(fn (Contract $record): string => '/admin/receipts?tableFilters[contract][value]=' . $record->id),
-                ])
-                    ->label('Công nợ')
-                    ->icon('heroicon-o-currency-dollar')
-                    ->color('success'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
