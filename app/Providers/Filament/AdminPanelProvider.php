@@ -38,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::hex('#2a4ff6'),
             ])
             ->brandName('ATT Dashboard')
-            ->brandLogo(asset('images/logo.png'))
+            ->brandLogo(fn () => view('filament.brand-logo'))
             ->brandLogoHeight('2rem')
             ->favicon(asset('images/favico.png'))
             ->renderHook(
