@@ -21,6 +21,7 @@ class Contract extends Model
         'end_date',
         'total_value_estimated',
         'currency',
+        'customer_contact_id',
         'sale_owner_id',
         'account_owner_id',
         'finance_owner_id',
@@ -41,6 +42,11 @@ class Contract extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function customerContact(): BelongsTo
+    {
+        return $this->belongsTo(CustomerContact::class);
     }
 
     public function saleOwner(): BelongsTo

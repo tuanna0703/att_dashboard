@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
 use App\Models\Contract;
+use App\Models\CustomerContact;
 use App\Models\User;
 use App\Support\DepartmentScope;
 use Filament\Forms;
@@ -53,6 +54,24 @@ class ContractResource extends Resource
                     ->searchable()
                     ->preload()
                     ->required()
+                    ->live()
+                    ->afterStateUpdated(fn (Forms\Set $set) => $set('customer_contact_id', null))
+                    ->columnSpan(2),
+                Forms\Components\Select::make('customer_contact_id')
+                    ->label('Người phụ trách (phía KH)')
+                    ->options(function (Forms\Get $get) {
+                        $customerId = $get('customer_id');
+                        if (!$customerId) {
+                            return [];
+                        }
+                        return CustomerContact::where('customer_id', $customerId)
+                            ->get()
+                            ->mapWithKeys(fn ($c) => [
+                                $c->id => $c->name . ($c->title ? " — {$c->title}" : '') . ($c->role ? " ({$c->role_label})" : ''),
+                            ]);
+                    })
+                    ->searchable()
+                    ->placeholder('Chọn khách hàng trước')
                     ->columnSpan(2),
                 Forms\Components\DatePicker::make('signed_date')->label('Ngày ký'),
                 Forms\Components\DatePicker::make('start_date')->label('Ngày bắt đầu'),
