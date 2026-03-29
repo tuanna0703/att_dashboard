@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\ContractResource\Pages;
 
 use App\Filament\Resources\ContractResource;
+use App\Models\CustomerContact;
 use Filament\Actions;
+use Filament\Forms;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Grid;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewContract extends ViewRecord
@@ -17,6 +20,48 @@ class ViewContract extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Actions\Action::make('create_contact')
+                ->label('Thêm người liên hệ')
+                ->icon('heroicon-o-user-plus')
+                ->color('gray')
+                ->form([
+                    Forms\Components\TextInput::make('name')
+                        ->label('Họ và tên')
+                        ->required()
+                        ->maxLength(100),
+                    Forms\Components\TextInput::make('title')
+                        ->label('Chức danh')
+                        ->placeholder('Giám đốc, Trưởng phòng...')
+                        ->maxLength(100),
+                    Forms\Components\Select::make('role')
+                        ->label('Vai trò')
+                        ->options(CustomerContact::$roles)
+                        ->required()
+                        ->default('other'),
+                    Forms\Components\Toggle::make('is_primary')
+                        ->label('Người liên hệ chính')
+                        ->default(false),
+                    Forms\Components\TextInput::make('phone')
+                        ->label('Số điện thoại')
+                        ->tel()
+                        ->maxLength(20),
+                    Forms\Components\TextInput::make('email')
+                        ->label('Email')
+                        ->email()
+                        ->maxLength(255),
+                    Forms\Components\Textarea::make('note')
+                        ->label('Ghi chú')
+                        ->columnSpanFull(),
+                ])
+                ->columns(2)
+                ->action(function (array $data): void {
+                    $this->record->customer->contacts()->create($data);
+                    Notification::make()
+                        ->title('Đã thêm người liên hệ cho ' . $this->record->customer->name)
+                        ->success()
+                        ->send();
+                }),
+
             Actions\EditAction::make()->label('Chỉnh sửa'),
             Actions\Action::make('payment_schedules')
                 ->label('Lịch thanh toán')

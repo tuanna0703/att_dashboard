@@ -15,6 +15,11 @@ class ContactsRelationManager extends RelationManager
     protected static ?string $title = 'Người liên hệ';
     protected static ?string $modelLabel = 'Người liên hệ';
 
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     public static function canViewForRecord(\Illuminate\Database\Eloquent\Model $ownerRecord, string $pageClass): bool
     {
         return auth()->user()->hasPermissionTo('customer_contacts.viewAny');
