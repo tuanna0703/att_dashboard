@@ -18,6 +18,8 @@ class RolePermissionSeeder extends Seeder
     private array $permissions = [
         // Khách hàng
         'customers.viewAny', 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
+        // Người liên hệ
+        'customer_contacts.viewAny', 'customer_contacts.create', 'customer_contacts.update', 'customer_contacts.delete',
         // Hợp đồng
         'contracts.viewAny', 'contracts.view', 'contracts.create', 'contracts.update', 'contracts.delete',
         // Hoá đơn
@@ -60,6 +62,7 @@ class RolePermissionSeeder extends Seeder
         $viceCeo = Role::firstOrCreate(['name' => 'vice_ceo', 'guard_name' => 'web']);
         $viceCeo->syncPermissions([
             'customers.viewAny', 'customers.view',
+            'customer_contacts.viewAny',
             'contracts.viewAny', 'contracts.view', 'contracts.update',
             'invoices.viewAny', 'invoices.view',
             'payment_schedules.viewAny', 'payment_schedules.view',
@@ -73,6 +76,7 @@ class RolePermissionSeeder extends Seeder
         $financeManager = Role::firstOrCreate(['name' => 'finance_manager', 'guard_name' => 'web']);
         $financeManager->syncPermissions([
             'customers.viewAny', 'customers.view', 'customers.create', 'customers.update',
+            'customer_contacts.viewAny', 'customer_contacts.create', 'customer_contacts.update', 'customer_contacts.delete',
             'contracts.viewAny', 'contracts.view', 'contracts.create', 'contracts.update',
             'invoices.viewAny', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.delete',
             'payment_schedules.viewAny', 'payment_schedules.view', 'payment_schedules.create', 'payment_schedules.update',
@@ -86,6 +90,7 @@ class RolePermissionSeeder extends Seeder
         $financeStaff = Role::firstOrCreate(['name' => 'finance_staff', 'guard_name' => 'web']);
         $financeStaff->syncPermissions([
             'customers.viewAny', 'customers.view', 'customers.create',
+            'customer_contacts.viewAny', 'customer_contacts.create', 'customer_contacts.update',
             'contracts.viewAny', 'contracts.view',
             'invoices.viewAny', 'invoices.view', 'invoices.create', 'invoices.update',
             'payment_schedules.viewAny', 'payment_schedules.view', 'payment_schedules.update',

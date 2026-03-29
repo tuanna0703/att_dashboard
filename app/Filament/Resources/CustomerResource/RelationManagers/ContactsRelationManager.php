@@ -15,6 +15,26 @@ class ContactsRelationManager extends RelationManager
     protected static ?string $title = 'Người liên hệ';
     protected static ?string $modelLabel = 'Người liên hệ';
 
+    public static function canViewForRecord(\Illuminate\Database\Eloquent\Model $ownerRecord, string $pageClass): bool
+    {
+        return auth()->user()->hasPermissionTo('customer_contacts.viewAny');
+    }
+
+    public function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('customer_contacts.create');
+    }
+
+    public function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('customer_contacts.update');
+    }
+
+    public function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('customer_contacts.delete');
+    }
+
     public function form(Form $form): Form
     {
         return $form->schema([
