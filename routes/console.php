@@ -31,3 +31,9 @@ Schedule::job(new GenerateSubscriptionSchedulesJob)->dailyAt('01:00')
 Schedule::job(new DailyCashflowSnapshotJob)->dailyAt('02:00')
     ->name('daily-cashflow-snapshot')
     ->withoutOverlapping();
+
+// Mỗi phút — gửi email báo cáo theo report subscriptions (command tự tính giờ gửi)
+Schedule::command('reports:send-subscriptions')
+    ->everyMinute()
+    ->name('send-report-subscriptions')
+    ->withoutOverlapping();
