@@ -95,6 +95,47 @@ class ContractResource extends Resource
                     ->searchable(),
             ])->columns(3),
 
+            Forms\Components\Section::make('Hạng mục hợp đồng')->schema([
+                Forms\Components\Repeater::make('lines')
+                    ->relationship('lines')
+                    ->label('')
+                    ->schema([
+                        Forms\Components\TextInput::make('name')
+                            ->label('Tên hạng mục')
+                            ->required()
+                            ->placeholder('VD: Dịch vụ quảng cáo tháng 1')
+                            ->columnSpan(2),
+                        Forms\Components\TextInput::make('planned_value')
+                            ->label('Giá trị kế hoạch (₫)')
+                            ->numeric()
+                            ->required()
+                            ->default(0)
+                            ->prefix('₫'),
+                        Forms\Components\TextInput::make('actual_value')
+                            ->label('Giá trị thực tế (₫)')
+                            ->numeric()
+                            ->default(0)
+                            ->prefix('₫'),
+                        Forms\Components\TextInput::make('vat_rate')
+                            ->label('VAT (%)')
+                            ->numeric()
+                            ->default(10)
+                            ->suffix('%'),
+                        Forms\Components\DatePicker::make('start_date')
+                            ->label('Từ ngày')
+                            ->displayFormat('d/m/Y'),
+                        Forms\Components\DatePicker::make('end_date')
+                            ->label('Đến ngày')
+                            ->displayFormat('d/m/Y'),
+                    ])
+                    ->columns(4)
+                    ->addActionLabel('Thêm hạng mục')
+                    ->defaultItems(0)
+                    ->reorderable()
+                    ->collapsible()
+                    ->itemLabel(fn (array $state): ?string => $state['name'] ?? 'Hạng mục mới'),
+            ]),
+
             Forms\Components\Section::make('Ghi chú & đính kèm')->schema([
                 Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')
@@ -250,7 +291,6 @@ class ContractResource extends Resource
     public static function getRelations(): array
     {
         return [
-            RelationManagers\ContractLinesRelationManager::class,
             RelationManagers\PaymentSchedulesRelationManager::class,
             RelationManagers\InvoicesRelationManager::class,
         ];
