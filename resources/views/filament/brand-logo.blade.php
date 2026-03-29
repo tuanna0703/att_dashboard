@@ -1,10 +1,10 @@
 <img src="{{ asset('images/logo.png') }}"
      class="att-logo-full"
-     style="height: 1.25rem; width: auto; display: block;">
+     style="height: 1.75rem; width: auto; display: block;">
 
 <img src="{{ asset('images/logo-icon.png') }}"
      class="att-logo-icon"
-     style="height: 1.25rem; width: auto; display: none;">
+     style="height: 1.75rem; width: auto; display: none;">
 
 <style>
     .fi-sidebar-collapsed .att-logo-full { display: none !important; }
