@@ -207,6 +207,7 @@ class PaymentScheduleResource extends Resource
         return [
             'index'  => Pages\ListPaymentSchedules::route('/'),
             'create' => Pages\CreatePaymentSchedule::route('/create'),
+            'view'   => Pages\ViewPaymentSchedule::route('/{record}'),
             'edit'   => Pages\EditPaymentSchedule::route('/{record}/edit'),
         ];
     }

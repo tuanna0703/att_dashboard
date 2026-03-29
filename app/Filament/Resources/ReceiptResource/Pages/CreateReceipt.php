@@ -8,4 +8,9 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateReceipt extends CreateRecord
 {
     protected static string $resource = ReceiptResource::class;
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('view', ['record' => $this->getRecord()]);
+    }
 }
