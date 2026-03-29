@@ -41,6 +41,10 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(asset('images/logo.png'))
             ->brandLogoHeight('2rem')
             ->favicon(asset('images/favico.png'))
+            ->renderHook(
+                'panels::global-search.after',
+                fn () => view('filament.quick-actions'),
+            )
             ->databaseNotifications()
             ->databaseNotificationsPolling('30s')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
