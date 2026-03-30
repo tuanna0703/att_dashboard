@@ -50,6 +50,10 @@ class MailgunSettings extends Page implements HasForms
             // Người gửi
             'from_address'      => AppSetting::get('mail.from_address'),
             'from_name'         => AppSetting::get('mail.from_name', config('app.name')),
+            'company_name'      => AppSetting::get('mail.company_name', config('app.name')),
+            'footer_text'       => AppSetting::get('mail.footer_text'),
+            'logo_url'          => AppSetting::get('mail.logo_url'),
+            'logo_upload'       => null,
         ]);
     }
 
@@ -145,11 +149,55 @@ class MailgunSettings extends Page implements HasForms
                                 ->required()
                                 ->maxLength(255),
                             TextInput::make('from_name')
-                                ->label('Tên hiển thị')
+                                ->label('Tên hiển thị (From name)')
                                 ->placeholder('ATT Dashboard')
                                 ->required()
                                 ->maxLength(255),
                         ]),
+                    ]),
+
+                Section::make('Template email')
+                    ->description('Tuỳ chỉnh logo, tên công ty và footer trong email gửi đi')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        \Filament\Forms\Components\FileUpload::make('logo_upload')
+                            ->label('Logo công ty')
+                            ->image()
+                            ->directory('mail-assets')
+                            ->disk('public')
+                            ->imagePreviewHeight('60')
+                            ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'])
+                            ->helperText('PNG/JPG/SVG, khuyến nghị chiều cao 80px. Sẽ hiển thị ở header email thay cho tên công ty.')
+                            ->afterStateUpdated(function ($state, \Filament\Forms\Set $set) {
+                                if ($state) {
+                                    $set('logo_url', asset('storage/' . $state));
+                                }
+                            })
+                            ->live()
+                            ->columnSpanFull(),
+
+                        Grid::make(2)->schema([
+                            TextInput::make('company_name')
+                                ->label('Tên công ty')
+                                ->placeholder('ATT Company')
+                                ->required()
+                                ->helperText('Hiển thị ở header (khi không có logo) và footer email.')
+                                ->maxLength(255),
+                            TextInput::make('logo_url')
+                                ->label('Logo URL (tuỳ chọn)')
+                                ->placeholder('https://yourdomain.com/images/logo.png')
+                                ->url()
+                                ->helperText('Điền URL nếu không upload. Upload ở trên sẽ tự điền trường này.')
+                                ->maxLength(500),
+                        ]),
+
+                        \Filament\Forms\Components\Textarea::make('footer_text')
+                            ->label('Văn bản footer')
+                            ->placeholder("© 2026 ATT Company. Bảo lưu mọi quyền.\nĐịa chỉ: 123 Đường ABC, TP.HCM")
+                            ->rows(3)
+                            ->helperText('Để trống để dùng footer mặc định. Hỗ trợ xuống dòng.')
+                            ->maxLength(500)
+                            ->columnSpanFull(),
                     ]),
             ])
             ->statePath('data');
@@ -162,6 +210,12 @@ class MailgunSettings extends Page implements HasForms
         AppSetting::set('mail.driver', $data['driver']);
         AppSetting::set('mail.from_address', $data['from_address']);
         AppSetting::set('mail.from_name', $data['from_name']);
+        AppSetting::set('mail.company_name', $data['company_name']);
+        AppSetting::set('mail.footer_text', $data['footer_text'] ?? '');
+        // logo_url: nếu vừa upload thì đã được set qua afterStateUpdated, lưu trực tiếp
+        if (!empty($data['logo_url'])) {
+            AppSetting::set('mail.logo_url', $data['logo_url']);
+        }
 
         if ($data['driver'] === 'mailgun') {
             AppSetting::set('mailgun.domain', $data['mg_domain']);
