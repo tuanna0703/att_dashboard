@@ -50,7 +50,7 @@ class SendReportSubscriptionsCommand extends Command
 
             foreach ($recipients as $user) {
                 try {
-                    Mail::to($user->email)->send($mailable);
+                    Mail::to($user->email)->send(clone $mailable);
                     $sent++;
                     $this->line("  Sent to {$user->email}");
                 } catch (\Throwable $e) {
