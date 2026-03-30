@@ -194,24 +194,22 @@ class ReportSubscriptionResource extends Resource
                                 ->send();
                             return;
                         }
-                        $buildMail = match ($record->report_type) {
-                            'overdue_summary' => new \App\Mail\OverdueSummaryMail(
-                                \App\Models\PaymentSchedule::with(['contract.customer', 'responsibleUser'])
-                                    ->where('status', 'overdue')->orderBy('due_date')->get(),
-                                $record->name
-                            ),
-                            'upcoming_payments' => new \App\Mail\UpcomingPaymentsMail(
-                                \App\Models\PaymentSchedule::with(['contract.customer', 'responsibleUser'])
-                                    ->whereIn('status', ['pending', 'invoiced', 'partially_paid'])
-                                    ->whereBetween('due_date', [today(), today()->addDays(30)])
-                                    ->orderBy('due_date')->get(),
-                                $record->name
-                            ),
+                        $schedules = match ($record->report_type) {
+                            'overdue_summary' => \App\Models\PaymentSchedule::with(['contract.customer', 'responsibleUser'])
+                                ->where('status', 'overdue')->orderBy('due_date')->get(),
+                            'upcoming_payments' => \App\Models\PaymentSchedule::with(['contract.customer', 'responsibleUser'])
+                                ->whereIn('status', ['pending', 'invoiced', 'partially_paid'])
+                                ->whereBetween('due_date', [today(), today()->addDays(30)])
+                                ->orderBy('due_date')->get(),
                             default => null,
                         };
-                        if ($buildMail) {
+                        if ($schedules !== null) {
                             foreach ($recipients as $user) {
-                                \Illuminate\Support\Facades\Mail::to($user->email)->send($buildMail);
+                                $mailable = match ($record->report_type) {
+                                    'overdue_summary'   => new \App\Mail\OverdueSummaryMail($schedules, $record->name),
+                                    'upcoming_payments' => new \App\Mail\UpcomingPaymentsMail($schedules, $record->name),
+                                };
+                                \Illuminate\Support\Facades\Mail::to($user->email)->send($mailable);
                             }
                             $record->update(['last_sent_at' => now()]);
                         }

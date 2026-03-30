@@ -38,19 +38,23 @@ class SendReportSubscriptionsCommand extends Command
                 continue;
             }
 
-            $mailable = match ($subscription->report_type) {
-                'overdue_summary'   => $this->buildOverdueMail($subscription->name),
-                'upcoming_payments' => $this->buildUpcomingMail($subscription->name),
+            $schedules = match ($subscription->report_type) {
+                'overdue_summary'   => $this->fetchOverdueSchedules(),
+                'upcoming_payments' => $this->fetchUpcomingSchedules(),
                 default             => null,
             };
 
-            if ($mailable === null) {
+            if ($schedules === null) {
                 continue;
             }
 
             foreach ($recipients as $user) {
                 try {
-                    Mail::to($user->email)->send(clone $mailable);
+                    $mailable = match ($subscription->report_type) {
+                        'overdue_summary'   => new OverdueSummaryMail($schedules, $subscription->name),
+                        'upcoming_payments' => new UpcomingPaymentsMail($schedules, $subscription->name),
+                    };
+                    Mail::to($user->email)->send($mailable);
                     $sent++;
                     $this->line("  Sent to {$user->email}");
                 } catch (\Throwable $e) {
@@ -71,24 +75,20 @@ class SendReportSubscriptionsCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function buildOverdueMail(string $name): OverdueSummaryMail
+    private function fetchOverdueSchedules(): \Illuminate\Support\Collection
     {
-        $schedules = PaymentSchedule::with(['contract.customer', 'responsibleUser'])
+        return PaymentSchedule::with(['contract.customer', 'responsibleUser'])
             ->where('status', 'overdue')
             ->orderBy('due_date')
             ->get();
-
-        return new OverdueSummaryMail($schedules, $name);
     }
 
-    private function buildUpcomingMail(string $name): UpcomingPaymentsMail
+    private function fetchUpcomingSchedules(): \Illuminate\Support\Collection
     {
-        $schedules = PaymentSchedule::with(['contract.customer', 'responsibleUser'])
+        return PaymentSchedule::with(['contract.customer', 'responsibleUser'])
             ->whereIn('status', ['pending', 'invoiced', 'partially_paid'])
             ->whereBetween('due_date', [today(), today()->addDays(30)])
             ->orderBy('due_date')
             ->get();
-
-        return new UpcomingPaymentsMail($schedules, $name);
     }
 }
