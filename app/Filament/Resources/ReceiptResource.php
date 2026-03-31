@@ -174,7 +174,7 @@ class ReceiptResource extends Resource
                             }
                             $ps = PaymentSchedule::find($state['payment_schedule_id']);
                             return $ps
-                                ? "Đợt {$ps->installment_no} — " . number_format($state['allocated_amount'] ?? 0, 0, ',', '.') . ' VND'
+                                ? "Đợt {$ps->installment_no} — " . number_format((float) str_replace('.', '', (string) ($state['allocated_amount'] ?? 0)), 0, ',', '.') . ' VND'
                                 : null;
                         })
                         ->collapsible(),
