@@ -19,6 +19,8 @@ class Receipt extends Model
         'bank_account',
         'note',
         'recorded_by',
+        'contract_id',
+        'company_bank_id',
     ];
 
     protected $casts = [
@@ -31,6 +33,16 @@ class Receipt extends Model
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class);
+    }
+
+    public function companyBank(): BelongsTo
+    {
+        return $this->belongsTo(CompanyBank::class);
     }
 
     public function allocations(): HasMany
