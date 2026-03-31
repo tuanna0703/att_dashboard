@@ -39,7 +39,7 @@ class ViewExpense extends ViewRecord
                 ->label('Duyệt')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->visible(fn () => $this->record->status === 'pending')
+                ->visible(fn () => $this->record->status === 'pending' && auth()->user()->hasPermissionTo('expenses.approve'))
                 ->requiresConfirmation()
                 ->action(function () {
                     $this->record->update([
@@ -55,7 +55,7 @@ class ViewExpense extends ViewRecord
                 ->label('Từ chối')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-                ->visible(fn () => $this->record->status === 'pending')
+                ->visible(fn () => $this->record->status === 'pending' && auth()->user()->hasPermissionTo('expenses.approve'))
                 ->form([
                     Forms\Components\Textarea::make('rejection_reason')
                         ->label('Lý do từ chối')

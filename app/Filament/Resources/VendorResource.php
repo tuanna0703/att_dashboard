@@ -126,6 +126,26 @@ class VendorResource extends Resource
             ->defaultSort('name');
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasPermissionTo('vendors.viewAny');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('vendors.create');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('vendors.update');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('vendors.delete');
+    }
+
     public static function getPages(): array
     {
         return [

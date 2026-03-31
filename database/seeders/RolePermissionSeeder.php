@@ -28,6 +28,12 @@ class RolePermissionSeeder extends Seeder
         'payment_schedules.viewAny', 'payment_schedules.view', 'payment_schedules.create', 'payment_schedules.update', 'payment_schedules.delete',
         // Phiếu thu
         'receipts.viewAny', 'receipts.view', 'receipts.create', 'receipts.update', 'receipts.delete',
+        // Phiếu chi
+        'expenses.viewAny', 'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete', 'expenses.approve',
+        // Nhà cung cấp
+        'vendors.viewAny', 'vendors.view', 'vendors.create', 'vendors.update', 'vendors.delete',
+        // Danh mục chi phí
+        'expense_categories.viewAny', 'expense_categories.create', 'expense_categories.update', 'expense_categories.delete',
         // Phòng ban
         'departments.viewAny', 'departments.view', 'departments.create', 'departments.update', 'departments.delete',
         // Users
@@ -67,6 +73,9 @@ class RolePermissionSeeder extends Seeder
             'invoices.viewAny', 'invoices.view',
             'payment_schedules.viewAny', 'payment_schedules.view',
             'receipts.viewAny', 'receipts.view',
+            'expenses.viewAny', 'expenses.view',
+            'vendors.viewAny', 'vendors.view',
+            'expense_categories.viewAny',
             'departments.viewAny', 'departments.view',
             'users.viewAny', 'users.view',
             'reports.viewDepartment',
@@ -81,6 +90,9 @@ class RolePermissionSeeder extends Seeder
             'invoices.viewAny', 'invoices.view', 'invoices.create', 'invoices.update', 'invoices.delete',
             'payment_schedules.viewAny', 'payment_schedules.view', 'payment_schedules.create', 'payment_schedules.update',
             'receipts.viewAny', 'receipts.view', 'receipts.create', 'receipts.update',
+            'expenses.viewAny', 'expenses.view', 'expenses.create', 'expenses.update', 'expenses.delete', 'expenses.approve',
+            'vendors.viewAny', 'vendors.view', 'vendors.create', 'vendors.update', 'vendors.delete',
+            'expense_categories.viewAny', 'expense_categories.create', 'expense_categories.update', 'expense_categories.delete',
             'departments.viewAny', 'departments.view',
             'users.viewAny', 'users.view',
             'reports.viewDepartment',
@@ -95,6 +107,9 @@ class RolePermissionSeeder extends Seeder
             'invoices.viewAny', 'invoices.view', 'invoices.create', 'invoices.update',
             'payment_schedules.viewAny', 'payment_schedules.view', 'payment_schedules.update',
             'receipts.viewAny', 'receipts.view', 'receipts.create',
+            'expenses.viewAny', 'expenses.view', 'expenses.create', 'expenses.update',
+            'vendors.viewAny', 'vendors.view',
+            'expense_categories.viewAny',
         ]);
 
         // ─── Seed Finance Department ─────────────────────────────────────────

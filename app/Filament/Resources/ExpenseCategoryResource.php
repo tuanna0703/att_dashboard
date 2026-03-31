@@ -95,6 +95,26 @@ class ExpenseCategoryResource extends Resource
             ->defaultSort('code');
     }
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasPermissionTo('expense_categories.viewAny');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('expense_categories.create');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('expense_categories.update');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('expense_categories.delete');
+    }
+
     public static function getPages(): array
     {
         return [

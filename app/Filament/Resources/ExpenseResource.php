@@ -345,7 +345,7 @@ class ExpenseResource extends Resource
                         ->label('Duyệt')
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
-                        ->visible(fn (Expense $record) => $record->status === 'pending')
+                        ->visible(fn (Expense $record) => $record->status === 'pending' && auth()->user()->hasPermissionTo('expenses.approve'))
                         ->requiresConfirmation()
                         ->modalHeading('Duyệt phiếu chi?')
                         ->action(function (Expense $record) {
@@ -362,7 +362,7 @@ class ExpenseResource extends Resource
                         ->label('Từ chối')
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
-                        ->visible(fn (Expense $record) => $record->status === 'pending')
+                        ->visible(fn (Expense $record) => $record->status === 'pending' && auth()->user()->hasPermissionTo('expenses.approve'))
                         ->form([
                             Forms\Components\Textarea::make('rejection_reason')
                                 ->label('Lý do từ chối')
@@ -416,6 +416,26 @@ class ExpenseResource extends Resource
                 ]),
             ])
             ->defaultSort('expense_date', 'desc');
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()->hasPermissionTo('expenses.viewAny');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('expenses.create');
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('expenses.update');
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()->hasPermissionTo('expenses.delete');
     }
 
     public static function getPages(): array
