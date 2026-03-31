@@ -90,6 +90,11 @@ class Contract extends Model
         return $this->hasMany(PaymentSchedule::class);
     }
 
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
     // ─── Computed ─────────────────────────────────────────────────────────────
 
     public function totalPaid(): float

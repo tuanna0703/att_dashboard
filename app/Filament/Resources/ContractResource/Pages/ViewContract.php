@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ContractResource\Pages;
 
 use App\Filament\Resources\ContractResource;
+use App\Filament\Resources\ReceiptResource;
 use App\Models\CustomerContact;
 use App\Models\Invoice;
 use App\Models\PaymentSchedule;
@@ -136,46 +137,7 @@ class ViewContract extends ViewRecord
                 ->label('Thêm phiếu thu')
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
-                ->modalWidth('2xl')
-                ->modalHeading('Thêm phiếu thu')
-                ->form([
-                    Forms\Components\Grid::make(2)->schema([
-                        Forms\Components\DatePicker::make('receipt_date')
-                            ->label('Ngày thu')
-                            ->required()
-                            ->default(now())
-                            ->displayFormat('d/m/Y'),
-                        Forms\Components\TextInput::make('amount')
-                            ->label('Số tiền thu')
-                            ->numeric()
-                            ->prefix('VND')
-                            ->required(),
-                        Forms\Components\Select::make('payment_method')
-                            ->label('Hình thức thanh toán')
-                            ->options([
-                                'bank_transfer' => 'Chuyển khoản',
-                                'cash'          => 'Tiền mặt',
-                                'cheque'        => 'Séc',
-                            ])
-                            ->default('bank_transfer')
-                            ->required(),
-                        Forms\Components\TextInput::make('reference_no')
-                            ->label('Số tham chiếu / Mã GD'),
-                        Forms\Components\TextInput::make('bank_account')
-                            ->label('Tài khoản ngân hàng'),
-                        Forms\Components\Select::make('recorded_by')
-                            ->label('Người ghi nhận')
-                            ->options(User::pluck('name', 'id'))
-                            ->default(auth()->id()),
-                        Forms\Components\Textarea::make('note')
-                            ->label('Ghi chú')
-                            ->columnSpanFull(),
-                    ]),
-                ])
-                ->action(function (array $data): void {
-                    Receipt::create($data);
-                    Notification::make()->title('Đã thêm phiếu thu')->success()->send();
-                }),
+                ->url(fn () => ReceiptResource::getUrl('create')),
 
             Actions\Action::make('create_contact')
                 ->label('Thêm người liên hệ')
