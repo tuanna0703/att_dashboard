@@ -164,7 +164,12 @@ class ReceiptResource extends Resource
                                         $component->state(number_format((float) $state, 0, ',', '.'));
                                     }
                                 })
-                                ->rules(['numeric', 'min:1']),
+                                ->rule(fn () => function ($attribute, $value, $fail) {
+                                    $numeric = (float) str_replace('.', '', (string) ($value ?? 0));
+                                    if ($numeric < 1) {
+                                        $fail('Số tiền phân bổ phải lớn hơn 0.');
+                                    }
+                                }),
                         ])
                         ->columns(3)
                         ->addActionLabel('+ Thêm đợt thanh toán')
