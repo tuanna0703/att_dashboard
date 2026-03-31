@@ -10,6 +10,13 @@ class EditReceipt extends EditRecord
 {
     protected static string $resource = ReceiptResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Giữ nguyên amount hiện tại — Observer sẽ tính lại sau khi allocations được lưu
+        $data['amount'] = $this->getRecord()->amount;
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [

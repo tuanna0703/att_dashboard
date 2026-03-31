@@ -69,13 +69,6 @@ class ReceiptResource extends Resource
                     ->required()
                     ->default(now()),
 
-                Forms\Components\TextInput::make('amount')
-                    ->label('Số tiền thu')
-                    ->numeric()
-                    ->prefix('VND')
-                    ->required()
-                    ->live(onBlur: true),
-
                 Forms\Components\Select::make('payment_method')
                     ->label('Hình thức thanh toán')
                     ->options([
@@ -145,6 +138,15 @@ class ReceiptResource extends Resource
                                 ->required()
                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                                 ->live()
+                                ->afterStateUpdated(function (Set $set, $state) {
+                                    if (! $state) {
+                                        return;
+                                    }
+                                    $ps = PaymentSchedule::find($state);
+                                    if ($ps) {
+                                        $set('allocated_amount', $ps->amountRemaining());
+                                    }
+                                })
                                 ->columnSpan(2),
 
                             Forms\Components\TextInput::make('allocated_amount')
