@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ContractResource\Pages;
 use App\Filament\Resources\ContractResource\RelationManagers;
+use App\Models\CompanyBank;
 use App\Models\Contract;
 use App\Models\CustomerContact;
 use App\Models\User;
@@ -113,6 +114,19 @@ class ContractResource extends Resource
                     ->options(User::pluck('name', 'id'))
                     ->searchable(),
             ])->columns(3),
+
+            Forms\Components\Section::make('Thanh toán')->schema([
+                Forms\Components\Select::make('company_bank_id')
+                    ->label('Tài khoản nhận thanh toán')
+                    ->options(CompanyBank::all()->mapWithKeys(fn ($b) => [
+                        $b->id => "{$b->bank_name} — {$b->account_number} ({$b->account_name})" . ($b->branch ? " — {$b->branch}" : ''),
+                    ]))
+                    ->searchable()
+                    ->placeholder('Chọn tài khoản ngân hàng...')
+                    ->default(fn () => CompanyBank::where('is_default', true)->value('id'))
+                    ->helperText('Tài khoản công ty để nhận thanh toán từ khách hàng.')
+                    ->columnSpanFull(),
+            ]),
 
             Forms\Components\Section::make('Hạng mục hợp đồng')->schema([
                 Forms\Components\Repeater::make('lines')

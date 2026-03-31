@@ -25,6 +25,7 @@ class Contract extends Model
         'sale_owner_id',
         'account_owner_id',
         'finance_owner_id',
+        'company_bank_id',
         'status',
         'note',
         'file_path',
@@ -62,6 +63,11 @@ class Contract extends Model
     public function financeOwner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'finance_owner_id');
+    }
+
+    public function companyBank(): BelongsTo
+    {
+        return $this->belongsTo(CompanyBank::class);
     }
 
     public function lines(): HasMany

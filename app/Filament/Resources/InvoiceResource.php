@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\InvoiceResource\Pages;
+use App\Models\CompanyBank;
 use App\Models\Invoice;
 use App\Support\DepartmentScope;
 use Filament\Forms;
@@ -31,6 +32,15 @@ class InvoiceResource extends Resource
                     ->searchable()
                     ->preload()
                     ->required()
+                    ->columnSpan(2),
+                Forms\Components\Select::make('company_bank_id')
+                    ->label('Tài khoản nhận thanh toán')
+                    ->options(CompanyBank::all()->mapWithKeys(fn ($b) => [
+                        $b->id => "{$b->bank_name} — {$b->account_number} ({$b->account_name})" . ($b->branch ? " — {$b->branch}" : ''),
+                    ]))
+                    ->searchable()
+                    ->placeholder('Chọn tài khoản ngân hàng...')
+                    ->default(fn () => CompanyBank::where('is_default', true)->value('id'))
                     ->columnSpan(2),
                 Forms\Components\TextInput::make('invoice_no')
                     ->label('Số hóa đơn')

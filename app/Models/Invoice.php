@@ -13,6 +13,7 @@ class Invoice extends Model
 
     protected $fillable = [
         'contract_id',
+        'company_bank_id',
         'invoice_no',
         'invoice_date',
         'invoice_value',
@@ -33,6 +34,11 @@ class Invoice extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    public function companyBank(): BelongsTo
+    {
+        return $this->belongsTo(CompanyBank::class);
     }
 
     public function paymentSchedules(): HasMany
