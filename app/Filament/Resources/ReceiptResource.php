@@ -15,6 +15,7 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Support\RawJs;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -144,17 +145,26 @@ class ReceiptResource extends Resource
                                     }
                                     $ps = PaymentSchedule::find($state);
                                     if ($ps) {
-                                        $set('allocated_amount', $ps->amountRemaining());
+                                        // Format theo VND để khớp với mask (dấu . ngăn cách hàng nghìn)
+                                        $set('allocated_amount', number_format($ps->amountRemaining(), 0, ',', '.'));
                                     }
                                 })
                                 ->columnSpan(2),
 
                             Forms\Components\TextInput::make('allocated_amount')
                                 ->label('Số tiền phân bổ')
-                                ->numeric()
                                 ->prefix('VND')
                                 ->required()
-                                ->minValue(1),
+                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                ->dehydrateStateUsing(
+                                    fn ($state) => (float) str_replace('.', '', (string) ($state ?? 0))
+                                )
+                                ->afterStateHydrated(function ($component, $state) {
+                                    if ($state !== null && $state !== '') {
+                                        $component->state(number_format((float) $state, 0, ',', '.'));
+                                    }
+                                })
+                                ->rules(['numeric', 'min:1']),
                         ])
                         ->columns(3)
                         ->addActionLabel('+ Thêm đợt thanh toán')
