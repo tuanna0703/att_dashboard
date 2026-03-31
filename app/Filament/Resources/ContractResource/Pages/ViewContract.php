@@ -196,7 +196,7 @@ class ViewContract extends ViewRecord
                 Tab::make('Tổng quan tài chính')
                     ->icon('heroicon-o-chart-bar')
                     ->schema([
-                        Section::make()->schema([
+                        Section::make('Doanh thu')->schema([
                             TextEntry::make('total_value_estimated')
                                 ->label('Giá trị HĐ (est.)')
                                 ->money('VND')
@@ -234,6 +234,38 @@ class ViewContract extends ViewRecord
                                 ->state(fn ($record) => $record->invoices()->sum('invoice_value'))
                                 ->money('VND'),
                         ])->columns(4),
+
+                        Section::make('Chi phí & Lợi nhuận')->schema([
+                            TextEntry::make('_total_expense')
+                                ->label('Tổng chi phí')
+                                ->state(fn ($record) => (float) $record->expenses()->whereIn('status', ['approved', 'paid'])->sum('total_amount'))
+                                ->money('VND')
+                                ->color('danger')
+                                ->weight('bold'),
+                            TextEntry::make('_expense_paid')
+                                ->label('Đã thanh toán chi phí')
+                                ->state(fn ($record) => (float) $record->expenses()->where('status', 'paid')->sum('total_amount'))
+                                ->money('VND')
+                                ->color('danger'),
+                            TextEntry::make('_expense_pending')
+                                ->label('Chi phí chờ duyệt')
+                                ->state(fn ($record) => (float) $record->expenses()->where('status', 'pending')->sum('total_amount'))
+                                ->money('VND')
+                                ->color('warning'),
+                            TextEntry::make('_gross_profit')
+                                ->label('Lợi nhuận gộp (est.)')
+                                ->state(function ($record) {
+                                    $revenue = $record->totalPaid();
+                                    $expense = (float) $record->expenses()->whereIn('status', ['approved', 'paid'])->sum('total_amount');
+                                    return $revenue - $expense;
+                                })
+                                ->money('VND')
+                                ->color(fn ($record) => ($record->totalPaid() - (float) $record->expenses()->whereIn('status', ['approved', 'paid'])->sum('total_amount')) >= 0 ? 'success' : 'danger')
+                                ->weight('bold'),
+                            TextEntry::make('_expense_count')
+                                ->label('Số phiếu chi')
+                                ->state(fn ($record) => $record->expenses()->count() . ' phiếu'),
+                        ])->columns(5),
                     ]),
 
                 Tab::make('Thông tin hợp đồng')

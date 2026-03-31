@@ -95,6 +95,11 @@ class Contract extends Model
         return $this->hasMany(Receipt::class);
     }
 
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
     // ─── Computed ─────────────────────────────────────────────────────────────
 
     public function totalPaid(): float

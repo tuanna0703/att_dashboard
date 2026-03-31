@@ -327,6 +327,7 @@ class ContractResource extends Resource
             RelationManagers\PaymentSchedulesRelationManager::class,
             RelationManagers\InvoicesRelationManager::class,
             RelationManagers\ReceiptsRelationManager::class,
+            RelationManagers\ExpensesRelationManager::class,
         ];
     }
 

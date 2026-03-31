@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\AppSetting;
+use App\Models\ExpenseItem;
 use App\Models\ReceiptAllocation;
+use App\Observers\ExpenseItemObserver;
 use App\Observers\ReceiptAllocationObserver;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -18,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         ReceiptAllocation::observe(ReceiptAllocationObserver::class);
+        ExpenseItem::observe(ExpenseItemObserver::class);
         $this->applyMailgunSettings();
     }
 
