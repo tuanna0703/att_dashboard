@@ -31,6 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 'Hợp đồng',
                 'Công nợ',
+                'Chi phí',
                 'Danh mục',
                 'Quản trị hệ thống',
             ])
