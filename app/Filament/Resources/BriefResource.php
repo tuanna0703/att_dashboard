@@ -114,6 +114,19 @@ class BriefResource extends Resource
                     ->label('Ghi chú')
                     ->rows(2)
                     ->columnSpanFull(),
+
+                Forms\Components\FileUpload::make('file_path')
+                    ->label('File đính kèm (brief gốc từ khách)')
+                    ->directory('briefs/attachments')
+                    ->acceptedFileTypes([
+                        'application/pdf',
+                        'image/*',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/msword',
+                    ])
+                    ->columnSpanFull(),
             ])->columns(2),
 
             Forms\Components\Section::make('Mạng lưới quảng cáo')->schema([

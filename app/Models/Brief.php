@@ -28,6 +28,7 @@ class Brief extends Model
         'status',
         'current_revision_id',
         'note',
+        'file_path',
     ];
 
     protected $casts = [
