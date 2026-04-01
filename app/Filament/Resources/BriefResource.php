@@ -11,6 +11,7 @@ use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
@@ -227,6 +228,11 @@ class BriefResource extends Resource
                     ->relationship('adops', 'name')
                     ->searchable(),
 
+                Tables\Filters\Filter::make('assigned_to_me')
+                    ->label('Assign cho tôi')
+                    ->query(fn ($query) => $query->where('adops_id', auth()->id()))
+                    ->toggle(),
+
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
@@ -255,6 +261,21 @@ class BriefResource extends Resource
                                 'adops_id' => $data['adops_id'],
                             ]);
                             Notification::make()->title('Đã gửi Brief cho AdOps')->success()->send();
+
+                            $adopsUser = User::find($data['adops_id']);
+                            if ($adopsUser) {
+                                Notification::make()
+                                    ->title('Brief mới được assign cho bạn')
+                                    ->body("{$record->brief_no} — {$record->campaign_name}")
+                                    ->icon('heroicon-o-document-magnifying-glass')
+                                    ->iconColor('info')
+                                    ->actions([
+                                        NotifAction::make('view')
+                                            ->label('Xem Brief')
+                                            ->url(static::getUrl('view', ['record' => $record])),
+                                    ])
+                                    ->sendToDatabase($adopsUser);
+                            }
                         }),
 
                     // AdOps báo đã có planning

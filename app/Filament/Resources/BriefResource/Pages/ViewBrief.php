@@ -4,13 +4,17 @@ namespace App\Filament\Resources\BriefResource\Pages;
 
 use App\Filament\Resources\BriefResource;
 use App\Models\Brief;
+use App\Models\User;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists\Components\Grid;
+use Filament\Notifications\Actions\Action as NotifAction;
+use Filament\Infolists\Components\IconEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Illuminate\Support\Facades\Storage;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 
@@ -42,6 +46,23 @@ class ViewBrief extends ViewRecord
                         'adops_id' => $data['adops_id'],
                     ]);
                     Notification::make()->title('Đã gửi Brief cho AdOps')->success()->send();
+
+                    // Gửi DB notification cho AdOps
+                    $adopsUser = User::find($data['adops_id']);
+                    if ($adopsUser) {
+                        Notification::make()
+                            ->title('Brief mới được assign cho bạn')
+                            ->body("{$this->record->brief_no} — {$this->record->campaign_name}")
+                            ->icon('heroicon-o-document-magnifying-glass')
+                            ->iconColor('info')
+                            ->actions([
+                                NotifAction::make('view')
+                                    ->label('Xem Brief')
+                                    ->url(BriefResource::getUrl('view', ['record' => $this->record])),
+                            ])
+                            ->sendToDatabase($adopsUser);
+                    }
+
                     $this->refreshFormData(['status', 'adops_id']);
                 }),
 
@@ -107,10 +128,16 @@ class ViewBrief extends ViewRecord
                 TextEntry::make('start_date')->label('Bắt đầu')->date('d/m/Y'),
                 TextEntry::make('end_date')->label('Kết thúc')->date('d/m/Y'),
                 TextEntry::make('budget')->label('Ngân sách')->money('VND')->placeholder('—'),
-                TextEntry::make('screen_count')->label('Số màn hình')->placeholder('—'),
                 TextEntry::make('cpm')->label('CPM')->money('VND')->placeholder('—'),
-                TextEntry::make('duration_days')->label('Số ngày')->placeholder('—')->suffix(' ngày'),
                 TextEntry::make('note')->label('Ghi chú')->placeholder('—')->columnSpanFull(),
+                TextEntry::make('file_path')
+                    ->label('File đính kèm')
+                    ->formatStateUsing(fn ($state) => $state ? basename($state) : null)
+                    ->placeholder('Không có file')
+                    ->url(fn ($state) => $state ? Storage::url($state) : null)
+                    ->openUrlInNewTab()
+                    ->icon('heroicon-o-paper-clip')
+                    ->columnSpanFull(),
             ])->columns(4),
 
             Section::make('Mạng lưới quảng cáo')->schema([

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\CampaignPipelineWidget;
 use App\Filament\Widgets\CashflowStatsWidget;
 use App\Filament\Widgets\TopDebtorsWidget;
 use Filament\Pages\Dashboard;
@@ -21,6 +22,7 @@ class CeoDashboard extends Dashboard
     public function getWidgets(): array
     {
         return [
+            CampaignPipelineWidget::class,
             CashflowStatsWidget::class,
             TopDebtorsWidget::class,
         ];
