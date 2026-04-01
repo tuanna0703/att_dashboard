@@ -71,18 +71,6 @@ class ViewBrief extends ViewRecord
                     $this->refreshFormData(['status', 'adops_id']);
                 }),
 
-            Actions\Action::make('planning_ready')
-                ->label('Planning sẵn sàng')
-                ->icon('heroicon-o-clipboard-document-check')
-                ->color('warning')
-                ->visible(fn () => $this->record->status === 'sent_to_adops')
-                ->requiresConfirmation()
-                ->action(function () {
-                    $this->record->update(['status' => 'planning_ready']);
-                    Notification::make()->title('Brief đã có planning')->success()->send();
-                    $this->refreshFormData(['status']);
-                }),
-
             Actions\Action::make('convert_to_booking')
                 ->label('Tạo Booking')
                 ->icon('heroicon-o-arrow-top-right-on-square')

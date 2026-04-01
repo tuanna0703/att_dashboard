@@ -278,19 +278,6 @@ class BriefResource extends Resource
                             }
                         }),
 
-                    // AdOps báo đã có planning
-                    Tables\Actions\Action::make('planning_ready')
-                        ->label('Planning sẵn sàng')
-                        ->icon('heroicon-o-clipboard-document-check')
-                        ->color('warning')
-                        ->visible(fn (Brief $record) => $record->status === 'sent_to_adops')
-                        ->requiresConfirmation()
-                        ->modalHeading('Xác nhận planning đã sẵn sàng?')
-                        ->action(function (Brief $record) {
-                            $record->update(['status' => 'planning_ready']);
-                            Notification::make()->title('Brief đã có planning — có thể gửi khách')->success()->send();
-                        }),
-
                     // Convert sang Booking (khi đã confirmed)
                     Tables\Actions\Action::make('convert_to_booking')
                         ->label('Tạo Booking')
