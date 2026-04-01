@@ -200,6 +200,105 @@ class PlansRelationManager extends RelationManager
                     Tables\Actions\EditAction::make()
                         ->visible(fn (Plan $record) => $record->status === 'draft'),
 
+                    // ── AdOps: Tạo plan điều chỉnh từ plan bị re_plan ────────
+                    Tables\Actions\Action::make('create_revision')
+                        ->label('Tạo Plan điều chỉnh')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('warning')
+                        ->visible(fn (Plan $record) => $record->status === 're_plan'
+                            && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
+                        )
+                        ->form([
+                            Forms\Components\TextInput::make('campaign_name')
+                                ->label('Tên campaign')
+                                ->required()
+                                ->maxLength(200)
+                                ->columnSpan(2),
+
+                            Forms\Components\DatePicker::make('start_date')
+                                ->label('Ngày bắt đầu')
+                                ->displayFormat('d/m/Y'),
+
+                            Forms\Components\DatePicker::make('end_date')
+                                ->label('Ngày kết thúc')
+                                ->displayFormat('d/m/Y')
+                                ->afterOrEqual('start_date'),
+
+                            Forms\Components\TextInput::make('budget')
+                                ->label('Ngân sách (VND)')
+                                ->prefix('₫')
+                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
+                                ->afterStateHydrated(function ($component, $state) {
+                                    if ($state !== null && $state !== '') {
+                                        $component->state(number_format((float) $state, 0, ',', '.'));
+                                    }
+                                }),
+
+                            Forms\Components\TextInput::make('cpm')
+                                ->label('CPM (VND)')
+                                ->prefix('₫')
+                                ->numeric(),
+
+                            Forms\Components\TextInput::make('screen_count')
+                                ->label('Số màn hình')
+                                ->numeric()
+                                ->minValue(1),
+
+                            Forms\Components\TextInput::make('duration_days')
+                                ->label('Số ngày chạy')
+                                ->numeric()
+                                ->minValue(1),
+
+                            Forms\Components\Textarea::make('note')
+                                ->label('Ghi chú / Điều chỉnh so với plan cũ')
+                                ->rows(4)
+                                ->columnSpanFull(),
+
+                            Forms\Components\FileUpload::make('file_path')
+                                ->label('File kế hoạch mới')
+                                ->directory('plans')
+                                ->acceptedFileTypes([
+                                    'application/pdf', 'image/*',
+                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                    'application/vnd.ms-excel',
+                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                    'application/msword',
+                                ])
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(2)
+                        ->modalHeading('Tạo Plan điều chỉnh')
+                        ->modalDescription(fn (Plan $record) => "Tạo phiên bản mới dựa trên Plan {$record->plan_no}. Lý do điều chỉnh: {$record->sale_comment}")
+                        ->fillForm(fn (Plan $record) => [
+                            'campaign_name' => $record->campaign_name,
+                            'start_date'    => $record->start_date,
+                            'end_date'      => $record->end_date,
+                            'budget'        => $record->budget ? number_format((float) $record->budget, 0, ',', '.') : null,
+                            'cpm'           => $record->cpm,
+                            'screen_count'  => $record->screen_count,
+                            'duration_days' => $record->duration_days,
+                            'note'          => $record->note,
+                        ])
+                        ->action(function (Plan $record, array $data) {
+                            Plan::create([
+                                'brief_id'      => $record->brief_id,
+                                'campaign_name' => $data['campaign_name'],
+                                'start_date'    => $data['start_date'] ?? null,
+                                'end_date'      => $data['end_date'] ?? null,
+                                'budget'        => $data['budget'] ?? null,
+                                'cpm'           => $data['cpm'] ?? null,
+                                'screen_count'  => $data['screen_count'] ?? null,
+                                'duration_days' => $data['duration_days'] ?? null,
+                                'note'          => $data['note'] ?? null,
+                                'file_path'     => $data['file_path'] ?? null,
+                                'status'        => 'draft',
+                                'created_by'    => auth()->id(),
+                            ]);
+
+                            Notification::make()->title('Đã tạo Plan điều chỉnh — tiếp tục chỉnh sửa và gửi duyệt')->success()->send();
+                        }),
+
                     // ── AdOps: Gửi plan cho Sale duyệt ──────────────────────
                     Tables\Actions\Action::make('submit')
                         ->label('Gửi duyệt')
