@@ -275,7 +275,7 @@ class PlansRelationManager extends RelationManager
                             'campaign_name' => $record->campaign_name,
                             'start_date'    => $record->start_date,
                             'end_date'      => $record->end_date,
-                            'budget'        => $record->budget ? number_format((float) $record->budget, 0, ',', '.') : null,
+                            'budget'        => $record->budget,
                             'cpm'           => $record->cpm,
                             'screen_count'  => $record->screen_count,
                             'duration_days' => $record->duration_days,
