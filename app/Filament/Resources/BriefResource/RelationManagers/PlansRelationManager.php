@@ -19,6 +19,11 @@ class PlansRelationManager extends RelationManager
     protected static string $relationship = 'plans';
     protected static ?string $title       = 'Plans của AdOps';
 
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
     public function canCreate(): bool
     {
         return auth()->user()->hasAnyRole(['adops', 'ceo', 'coo']);
