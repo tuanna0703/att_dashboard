@@ -21,7 +21,7 @@ class PlansRelationManager extends RelationManager
 
     public function canCreate(): bool
     {
-        return auth()->user()->hasPermissionTo('plans.create');
+        return true;
     }
 
     public function form(Form $form): Form
