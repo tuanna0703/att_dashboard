@@ -11,10 +11,6 @@ use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
-    /**
-     * Danh sách tất cả permissions theo module.
-     * Format: {module}.{action}
-     */
     private array $permissions = [
         // Khách hàng
         'customers.viewAny', 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
@@ -42,14 +38,23 @@ class RolePermissionSeeder extends Seeder
         'reports.viewAll', 'reports.viewDepartment',
         // Hệ thống
         'roles.manage',
+
+        // ── Booking Module ────────────────────────────────────────────────────
+        // Mạng lưới quảng cáo
+        'ad_networks.viewAny', 'ad_networks.create', 'ad_networks.update', 'ad_networks.delete',
+        // Brief
+        'briefs.viewAny', 'briefs.view', 'briefs.create', 'briefs.update', 'briefs.delete',
+        // Booking
+        'bookings.viewAny', 'bookings.view', 'bookings.update',
+        // Media Buying Order
+        'media_buying_orders.viewAny', 'media_buying_orders.view',
+        'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
     ];
 
     public function run(): void
     {
-        // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Tạo tất cả permissions
         foreach ($this->permissions as $perm) {
             Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
         }
@@ -58,13 +63,13 @@ class RolePermissionSeeder extends Seeder
         $ceo = Role::firstOrCreate(['name' => 'ceo', 'guard_name' => 'web']);
         $ceo->syncPermissions(Permission::all());
 
-        // ─── COO: Toàn bộ operational, không quản lý roles/users ────────────
+        // ─── COO: Toàn bộ operational, duyệt MBO ─────────────────────────────
         $coo = Role::firstOrCreate(['name' => 'coo', 'guard_name' => 'web']);
         $coo->syncPermissions(array_filter($this->permissions, fn ($p) =>
-            !in_array($p, ['roles.manage', 'users.delete', 'departments.delete'])
+            ! in_array($p, ['roles.manage', 'users.delete', 'departments.delete'])
         ));
 
-        // ─── Vice CEO: Xem & approve theo dept, không thao tác admin ────────
+        // ─── Vice CEO: Xem & approve theo dept, duyệt MBO ───────────────────
         $viceCeo = Role::firstOrCreate(['name' => 'vice_ceo', 'guard_name' => 'web']);
         $viceCeo->syncPermissions([
             'customers.viewAny', 'customers.view',
@@ -73,15 +78,20 @@ class RolePermissionSeeder extends Seeder
             'invoices.viewAny', 'invoices.view',
             'payment_schedules.viewAny', 'payment_schedules.view',
             'receipts.viewAny', 'receipts.view',
-            'expenses.viewAny', 'expenses.view',
+            'expenses.viewAny', 'expenses.view', 'expenses.approve',
             'vendors.viewAny', 'vendors.view',
             'expense_categories.viewAny',
             'departments.viewAny', 'departments.view',
             'users.viewAny', 'users.view',
             'reports.viewDepartment',
+            // Booking module
+            'ad_networks.viewAny',
+            'briefs.viewAny', 'briefs.view',
+            'bookings.viewAny', 'bookings.view',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
 
-        // ─── Finance Manager: Full finance, xem dept ─────────────────────────
+        // ─── Finance Manager: Full finance + duyệt MBO cấp 2 ────────────────
         $financeManager = Role::firstOrCreate(['name' => 'finance_manager', 'guard_name' => 'web']);
         $financeManager->syncPermissions([
             'customers.viewAny', 'customers.view', 'customers.create', 'customers.update',
@@ -96,9 +106,14 @@ class RolePermissionSeeder extends Seeder
             'departments.viewAny', 'departments.view',
             'users.viewAny', 'users.view',
             'reports.viewDepartment',
+            // Booking module
+            'ad_networks.viewAny',
+            'briefs.viewAny', 'briefs.view',
+            'bookings.viewAny', 'bookings.view',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
 
-        // ─── Finance Staff: Thao tác cơ bản theo assignment ─────────────────
+        // ─── Finance Staff: Thao tác cơ bản + xem booking ───────────────────
         $financeStaff = Role::firstOrCreate(['name' => 'finance_staff', 'guard_name' => 'web']);
         $financeStaff->syncPermissions([
             'customers.viewAny', 'customers.view', 'customers.create',
@@ -110,28 +125,74 @@ class RolePermissionSeeder extends Seeder
             'expenses.viewAny', 'expenses.view', 'expenses.create', 'expenses.update',
             'vendors.viewAny', 'vendors.view',
             'expense_categories.viewAny',
+            // Booking module
+            'bookings.viewAny', 'bookings.view',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
 
-        // ─── Seed Finance Department ─────────────────────────────────────────
+        // ─── Sale: Quản lý Brief, theo dõi Booking, tạo Contract ─────────────
+        $sale = Role::firstOrCreate(['name' => 'sale', 'guard_name' => 'web']);
+        $sale->syncPermissions([
+            'customers.viewAny', 'customers.view', 'customers.create', 'customers.update',
+            'customer_contacts.viewAny', 'customer_contacts.create', 'customer_contacts.update',
+            'contracts.viewAny', 'contracts.view', 'contracts.create', 'contracts.update',
+            'ad_networks.viewAny',
+            'briefs.viewAny', 'briefs.view', 'briefs.create', 'briefs.update', 'briefs.delete',
+            'bookings.viewAny', 'bookings.view', 'bookings.update',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
+        ]);
+
+        // ─── AdOps: Nhận Brief, tạo planning, tạo MBO, làm nghiệm thu ────────
+        $adops = Role::firstOrCreate(['name' => 'adops', 'guard_name' => 'web']);
+        $adops->syncPermissions([
+            'customers.viewAny', 'customers.view',
+            'contracts.viewAny', 'contracts.view',
+            'ad_networks.viewAny',
+            'briefs.viewAny', 'briefs.view', 'briefs.update',
+            'bookings.viewAny', 'bookings.view',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
+            'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
+        ]);
+
+        // ─── Media Buyer: Nhận MBO, thực thi mua inventory ───────────────────
+        $mediaBuyer = Role::firstOrCreate(['name' => 'media_buyer', 'guard_name' => 'web']);
+        $mediaBuyer->syncPermissions([
+            'contracts.viewAny', 'contracts.view',
+            'bookings.viewAny', 'bookings.view',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
+        ]);
+
+        // ─── Departments ──────────────────────────────────────────────────────
         $financeDept = Department::firstOrCreate(
             ['code' => 'FIN'],
             ['name' => 'Tài chính', 'description' => 'Phòng Tài chính - Kế toán', 'is_active' => true]
         );
 
-        // ─── Seed default users ───────────────────────────────────────────────
-        $this->seedDefaultUsers($financeDept);
+        $salesDept = Department::firstOrCreate(
+            ['code' => 'SALES'],
+            ['name' => 'Kinh doanh', 'description' => 'Phòng Kinh doanh / Sale', 'is_active' => true]
+        );
 
-        $this->command->info('✅ Roles, Permissions, và default users đã được tạo.');
+        $adsDept = Department::firstOrCreate(
+            ['code' => 'ADS'],
+            ['name' => 'Quảng cáo', 'description' => 'Phòng AdOps / Media Buying', 'is_active' => true]
+        );
+
+        // ─── Default users ────────────────────────────────────────────────────
+        $this->seedDefaultUsers($financeDept, $salesDept, $adsDept);
+
+        $this->command->info('✅ Roles, Permissions, Departments, và default users đã được tạo.');
+        $allRoles = ['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff', 'sale', 'adops', 'media_buyer'];
         $this->command->table(
             ['Role', 'Permissions'],
-            collect(['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff'])->map(fn ($r) => [
+            collect($allRoles)->map(fn ($r) => [
                 $r,
                 Role::findByName($r)->permissions()->count() . ' permissions',
             ])->toArray()
         );
     }
 
-    private function seedDefaultUsers(Department $financeDept): void
+    private function seedDefaultUsers(Department $financeDept, Department $salesDept, Department $adsDept): void
     {
         $users = [
             [
@@ -155,12 +216,33 @@ class RolePermissionSeeder extends Seeder
                 'department_id' => $financeDept->id,
                 'role'          => 'finance_staff',
             ],
+            // ── Booking team ─────────────────────────────────────────────────
+            [
+                'name'          => 'Sale 1',
+                'email'         => 'sale1@att.vn',
+                'password'      => Hash::make('Admin@123'),
+                'department_id' => $salesDept->id,
+                'role'          => 'sale',
+            ],
+            [
+                'name'          => 'AdOps 1',
+                'email'         => 'adops1@att.vn',
+                'password'      => Hash::make('Admin@123'),
+                'department_id' => $adsDept->id,
+                'role'          => 'adops',
+            ],
+            [
+                'name'          => 'Media Buyer 1',
+                'email'         => 'buyer1@att.vn',
+                'password'      => Hash::make('Admin@123'),
+                'department_id' => $adsDept->id,
+                'role'          => 'media_buyer',
+            ],
         ];
 
         foreach ($users as $data) {
             $role = $data['role'];
             unset($data['role']);
-
             $user = User::firstOrCreate(['email' => $data['email']], $data);
             $user->syncRoles($role);
         }

@@ -12,6 +12,7 @@ class ContractLine extends Model
 
     protected $fillable = [
         'contract_id',
+        'ad_network_id',
         'name',
         'planned_value',
         'actual_value',
@@ -33,6 +34,11 @@ class ContractLine extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    public function adNetwork(): BelongsTo
+    {
+        return $this->belongsTo(AdNetwork::class);
     }
 
     // ─── Computed ─────────────────────────────────────────────────────────────

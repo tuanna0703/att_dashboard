@@ -12,6 +12,7 @@ class Contract extends Model
     use SoftDeletes;
 
     protected $fillable = [
+        'booking_id',
         'contract_code',
         'name',
         'customer_id',
@@ -39,6 +40,11 @@ class Contract extends Model
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────
+
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class);
+    }
 
     public function customer(): BelongsTo
     {
@@ -98,6 +104,11 @@ class Contract extends Model
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);
+    }
+
+    public function mediaBuyingOrders(): HasMany
+    {
+        return $this->hasMany(MediaBuyingOrder::class);
     }
 
     // ─── Computed ─────────────────────────────────────────────────────────────

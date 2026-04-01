@@ -1,0 +1,128 @@
+<?php
+
+namespace App\Filament\Resources\BriefResource\Pages;
+
+use App\Filament\Resources\BriefResource;
+use App\Models\Brief;
+use Filament\Actions;
+use Filament\Forms;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
+use Filament\Resources\Pages\ViewRecord;
+
+class ViewBrief extends ViewRecord
+{
+    protected static string $resource = BriefResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\EditAction::make()
+                ->visible(fn () => in_array($this->record->status, ['draft', 'customer_feedback'])),
+
+            Actions\Action::make('send_to_adops')
+                ->label('Gửi AdOps')
+                ->icon('heroicon-o-arrow-right-circle')
+                ->color('info')
+                ->visible(fn () => $this->record->status === 'draft')
+                ->form([
+                    Forms\Components\Select::make('adops_id')
+                        ->label('Assign cho AdOps')
+                        ->options(\App\Models\User::orderBy('name')->pluck('name', 'id'))
+                        ->required()
+                        ->searchable(),
+                ])
+                ->action(function (array $data) {
+                    $this->record->update([
+                        'status'   => 'sent_to_adops',
+                        'adops_id' => $data['adops_id'],
+                    ]);
+                    Notification::make()->title('Đã gửi Brief cho AdOps')->success()->send();
+                    $this->refreshFormData(['status', 'adops_id']);
+                }),
+
+            Actions\Action::make('planning_ready')
+                ->label('Planning sẵn sàng')
+                ->icon('heroicon-o-clipboard-document-check')
+                ->color('warning')
+                ->visible(fn () => $this->record->status === 'sent_to_adops')
+                ->requiresConfirmation()
+                ->action(function () {
+                    $this->record->update(['status' => 'planning_ready']);
+                    Notification::make()->title('Brief đã có planning')->success()->send();
+                    $this->refreshFormData(['status']);
+                }),
+
+            Actions\Action::make('convert_to_booking')
+                ->label('Tạo Booking')
+                ->icon('heroicon-o-arrow-top-right-on-square')
+                ->color('primary')
+                ->visible(fn () => $this->record->status === 'confirmed')
+                ->requiresConfirmation()
+                ->modalHeading('Chuyển Brief thành Booking?')
+                ->modalDescription('Revision is_final sẽ được áp dụng cho Booking.')
+                ->action(function () {
+                    $finalRevision = $this->record->revisions()->where('is_final', true)->first();
+                    if (! $finalRevision) {
+                        Notification::make()->title('Không tìm thấy revision cuối cùng')->danger()->send();
+                        return;
+                    }
+                    $booking = \App\Models\Booking::create([
+                        'brief_id'          => $this->record->id,
+                        'brief_revision_id' => $finalRevision->id,
+                        'customer_id'       => $this->record->customer_id,
+                        'sale_id'           => $this->record->sale_id,
+                        'adops_id'          => $this->record->adops_id,
+                        'campaign_name'     => $this->record->campaign_name,
+                        'start_date'        => $this->record->start_date,
+                        'end_date'          => $this->record->end_date,
+                        'total_budget'      => $this->record->budget,
+                        'status'            => 'pending_contract',
+                    ]);
+                    $this->record->update(['status' => 'converted']);
+                    Notification::make()->title("Đã tạo Booking {$booking->booking_no}")->success()->send();
+                    $this->refreshFormData(['status']);
+                }),
+        ];
+    }
+
+    public function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist->schema([
+            Section::make('Thông tin Campaign')->schema([
+                TextEntry::make('brief_no')->label('Mã Brief')->weight('bold')->copyable(),
+                TextEntry::make('status')
+                    ->label('Trạng thái')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => Brief::$statuses[$state] ?? $state)
+                    ->color(fn ($state) => Brief::$statusColors[$state] ?? 'gray'),
+                TextEntry::make('campaign_name')->label('Tên Campaign')->columnSpan(2),
+                TextEntry::make('customer.name')->label('Khách hàng'),
+                TextEntry::make('sale.name')->label('Sale'),
+                TextEntry::make('adops.name')->label('AdOps')->placeholder('Chưa assign'),
+                TextEntry::make('start_date')->label('Bắt đầu')->date('d/m/Y'),
+                TextEntry::make('end_date')->label('Kết thúc')->date('d/m/Y'),
+                TextEntry::make('budget')->label('Ngân sách')->money('VND')->placeholder('—'),
+                TextEntry::make('screen_count')->label('Số màn hình')->placeholder('—'),
+                TextEntry::make('cpm')->label('CPM')->money('VND')->placeholder('—'),
+                TextEntry::make('duration_days')->label('Số ngày')->placeholder('—')->suffix(' ngày'),
+                TextEntry::make('note')->label('Ghi chú')->placeholder('—')->columnSpanFull(),
+            ])->columns(4),
+
+            Section::make('Mạng lưới quảng cáo')->schema([
+                RepeatableEntry::make('briefAdNetworks')
+                    ->label('')
+                    ->schema([
+                        TextEntry::make('adNetwork.name')->label('Mạng lưới'),
+                        TextEntry::make('screen_count')->label('Số màn hình')->placeholder('—'),
+                        TextEntry::make('note')->label('Ghi chú')->placeholder('—'),
+                    ])
+                    ->columns(3),
+            ]),
+        ]);
+    }
+}

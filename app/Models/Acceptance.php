@@ -12,6 +12,7 @@ class Acceptance extends Model
 
     protected $fillable = [
         'contract_id',
+        'adops_id',
         'acceptance_no',
         'acceptance_date',
         'accepted_value',
@@ -30,5 +31,10 @@ class Acceptance extends Model
     public function contract(): BelongsTo
     {
         return $this->belongsTo(Contract::class);
+    }
+
+    public function adops(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'adops_id');
     }
 }

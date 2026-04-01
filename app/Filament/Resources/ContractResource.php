@@ -30,6 +30,8 @@ class ContractResource extends Resource
     {
         return $form->schema([
             Forms\Components\Section::make('Thông tin hợp đồng')->schema([
+                Forms\Components\Hidden::make('booking_id'),
+
                 Forms\Components\TextInput::make('contract_code')
                     ->label('Số hợp đồng')
                     ->required()
@@ -328,6 +330,8 @@ class ContractResource extends Resource
             RelationManagers\InvoicesRelationManager::class,
             RelationManagers\ReceiptsRelationManager::class,
             RelationManagers\ExpensesRelationManager::class,
+            RelationManagers\MediaBuyingOrdersRelationManager::class,
+            RelationManagers\AcceptancesRelationManager::class,
         ];
     }
 

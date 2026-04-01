@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ContractResource\RelationManagers;
 
+use App\Models\AdNetwork;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -16,6 +17,12 @@ class ContractLinesRelationManager extends RelationManager
     public function form(Form $form): Form
     {
         return $form->schema([
+            Forms\Components\Select::make('ad_network_id')
+                ->label('Mạng lưới QC')
+                ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
+                ->searchable()
+                ->placeholder('Không áp dụng')
+                ->columnSpan(2),
             Forms\Components\TextInput::make('name')
                 ->label('Hạng mục')
                 ->required()
@@ -44,6 +51,7 @@ class ContractLinesRelationManager extends RelationManager
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('adNetwork.name')->label('Mạng lưới')->placeholder('—'),
                 Tables\Columns\TextColumn::make('name')->label('Hạng mục')->searchable(),
                 Tables\Columns\TextColumn::make('planned_value')->label('KH')->money('VND'),
                 Tables\Columns\TextColumn::make('actual_value')->label('Thực tế')->money('VND'),

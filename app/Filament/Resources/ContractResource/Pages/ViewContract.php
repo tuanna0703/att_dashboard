@@ -272,6 +272,14 @@ class ViewContract extends ViewRecord
                     ->icon('heroicon-o-document-text')
                     ->schema([
                         Section::make()->schema([
+                            TextEntry::make('booking.booking_no')
+                                ->label('Booking nguồn')
+                                ->placeholder('Không từ Booking')
+                                ->badge()
+                                ->color('primary')
+                                ->url(fn ($record) => $record->booking_id
+                                    ? \App\Filament\Resources\BookingResource::getUrl('view', ['record' => $record->booking_id])
+                                    : null),
                             TextEntry::make('contract_code')
                                 ->label('Số hợp đồng')
                                 ->weight('bold')
