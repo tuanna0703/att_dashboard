@@ -75,7 +75,7 @@ class BriefResource extends Resource
                 Forms\Components\DatePicker::make('end_date')
                     ->label('Ngày kết thúc')
                     ->displayFormat('d/m/Y')
-                    ->after('start_date'),
+                    ->afterOrEqual('start_date'),
             ])->columns(2),
 
             Forms\Components\Section::make('Chi tiết yêu cầu')->schema([
