@@ -29,6 +29,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->sidebarCollapsibleOnDesktop()
             ->navigationGroups([
+                'Booking',
                 'Hợp đồng',
                 'Công nợ',
                 'Chi phí',
@@ -68,8 +69,11 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->homeUrl(fn (): string => match (true) {
-                auth()->user()?->hasAnyRole(['ceo', 'coo']) => '/admin',
-                default => '/admin/finance',
+                auth()->user()?->hasAnyRole(['ceo', 'coo'])                       => '/admin',
+                auth()->user()?->hasAnyRole(['adops', 'media_buyer'])             => '/admin/adops',
+                auth()->user()?->hasAnyRole(['sale'])                              => '/admin/sale',
+                auth()->user()?->hasAnyRole(['vice_ceo', 'finance_manager', 'finance_staff']) => '/admin/finance',
+                default => '/admin',
             });
     }
 }
