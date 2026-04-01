@@ -19,6 +19,11 @@ class PlansRelationManager extends RelationManager
     protected static string $relationship = 'plans';
     protected static ?string $title       = 'Plans của AdOps';
 
+    public function canCreate(): bool
+    {
+        return auth()->user()->hasPermissionTo('plans.create');
+    }
+
     public function form(Form $form): Form
     {
         $brief = $this->getOwnerRecord();
@@ -177,10 +182,12 @@ class PlansRelationManager extends RelationManager
                         $data['status']     = 'draft';
                         return $data;
                     })
-                    ->visible(fn () => in_array(
-                        $this->getOwnerRecord()->status,
-                        ['sent_to_adops', 'planning_ready']
-                    )),
+                    ->visible(fn () => auth()->user()->hasPermissionTo('plans.create')
+                        && in_array(
+                            $this->getOwnerRecord()->status,
+                            ['sent_to_adops', 'planning_ready', 'customer_feedback']
+                        )
+                    ),
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
