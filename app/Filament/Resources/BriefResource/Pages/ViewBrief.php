@@ -22,6 +22,11 @@ class ViewBrief extends ViewRecord
 {
     protected static string $resource = BriefResource::class;
 
+    public function getRelationManagers(): array
+    {
+        return BriefResource::getRelationManagers();
+    }
+
     protected function getHeaderActions(): array
     {
         return [
