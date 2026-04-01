@@ -21,7 +21,7 @@ class PlansRelationManager extends RelationManager
 
     public function canCreate(): bool
     {
-        return true;
+        return auth()->user()->hasAnyRole(['adops', 'ceo', 'coo']);
     }
 
     public function form(Form $form): Form
@@ -182,11 +182,10 @@ class PlansRelationManager extends RelationManager
                         $data['status']     = 'draft';
                         return $data;
                     })
-                    ->visible(fn () => auth()->user()->hasPermissionTo('plans.create')
-                        && in_array(
-                            $this->getOwnerRecord()->status,
-                            ['sent_to_adops', 'planning_ready', 'customer_feedback']
-                        )
+                    ->visible(fn () => auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
+                        && in_array($this->getOwnerRecord()->status, [
+                            'sent_to_adops', 'planning_ready', 'customer_feedback',
+                        ])
                     ),
             ])
             ->actions([
