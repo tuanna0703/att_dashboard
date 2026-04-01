@@ -112,6 +112,16 @@ class Brief extends Model
         return $this->hasMany(BriefAdNetwork::class);
     }
 
+    public function plans(): HasMany
+    {
+        return $this->hasMany(Plan::class)->orderBy('version');
+    }
+
+    public function acceptedPlan(): HasOne
+    {
+        return $this->hasOne(Plan::class)->where('status', 'accepted')->latestOfMany();
+    }
+
     public function booking(): HasOne
     {
         return $this->hasOne(Booking::class);

@@ -15,6 +15,7 @@ class Booking extends Model
         'booking_no',
         'brief_id',
         'brief_revision_id',
+        'plan_id',
         'contract_id',
         'customer_id',
         'sale_id',
@@ -76,6 +77,11 @@ class Booking extends Model
     public function finalRevision(): BelongsTo
     {
         return $this->belongsTo(BriefRevision::class, 'brief_revision_id');
+    }
+
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
     }
 
     public function contract(): BelongsTo

@@ -87,24 +87,28 @@ class ViewBrief extends ViewRecord
                 ->modalHeading('Chuyển Brief thành Booking?')
                 ->modalDescription('Revision is_final sẽ được áp dụng cho Booking.')
                 ->action(function () {
-                    $finalRevision = $this->record->revisions()->where('is_final', true)->first();
-                    if (! $finalRevision) {
-                        Notification::make()->title('Không tìm thấy revision cuối cùng')->danger()->send();
-                        return;
-                    }
+                    $brief        = $this->record;
+                    $acceptedPlan = $brief->plans()->where('status', 'accepted')->latest()->first();
+                    $finalRevision = $brief->revisions()->where('is_final', true)->first();
+
+                    // Lấy data từ accepted Plan nếu có, fallback về Brief
+                    $source = $acceptedPlan ?? $brief;
+
                     $booking = \App\Models\Booking::create([
-                        'brief_id'          => $this->record->id,
-                        'brief_revision_id' => $finalRevision->id,
-                        'customer_id'       => $this->record->customer_id,
-                        'sale_id'           => $this->record->sale_id,
-                        'adops_id'          => $this->record->adops_id,
-                        'campaign_name'     => $this->record->campaign_name,
-                        'start_date'        => $this->record->start_date,
-                        'end_date'          => $this->record->end_date,
-                        'total_budget'      => $this->record->budget,
+                        'brief_id'          => $brief->id,
+                        'brief_revision_id' => $finalRevision?->id,
+                        'plan_id'           => $acceptedPlan?->id,
+                        'customer_id'       => $brief->customer_id,
+                        'sale_id'           => $brief->sale_id,
+                        'adops_id'          => $brief->adops_id,
+                        'campaign_name'     => $source->campaign_name,
+                        'start_date'        => $source->start_date,
+                        'end_date'          => $source->end_date,
+                        'total_budget'      => $source->budget,
                         'status'            => 'pending_contract',
                     ]);
-                    $this->record->update(['status' => 'converted']);
+
+                    $brief->update(['status' => 'converted']);
                     Notification::make()->title("Đã tạo Booking {$booking->booking_no}")->success()->send();
                     $this->refreshFormData(['status']);
                 }),

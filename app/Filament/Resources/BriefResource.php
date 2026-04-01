@@ -301,21 +301,21 @@ class BriefResource extends Resource
                         ->modalHeading('Chuyển Brief thành Booking?')
                         ->modalDescription('Revision cuối cùng (is_final) sẽ được áp dụng cho Booking.')
                         ->action(function (Brief $record) {
+                            $acceptedPlan  = $record->plans()->where('status', 'accepted')->latest()->first();
                             $finalRevision = $record->revisions()->where('is_final', true)->first();
-                            if (! $finalRevision) {
-                                Notification::make()->title('Không tìm thấy revision cuối cùng')->danger()->send();
-                                return;
-                            }
+                            $source        = $acceptedPlan ?? $record;
+
                             $booking = \App\Models\Booking::create([
                                 'brief_id'          => $record->id,
-                                'brief_revision_id' => $finalRevision->id,
+                                'brief_revision_id' => $finalRevision?->id,
+                                'plan_id'           => $acceptedPlan?->id,
                                 'customer_id'       => $record->customer_id,
                                 'sale_id'           => $record->sale_id,
                                 'adops_id'          => $record->adops_id,
-                                'campaign_name'     => $record->campaign_name,
-                                'start_date'        => $record->start_date,
-                                'end_date'          => $record->end_date,
-                                'total_budget'      => $record->budget,
+                                'campaign_name'     => $source->campaign_name,
+                                'start_date'        => $source->start_date,
+                                'end_date'          => $source->end_date,
+                                'total_budget'      => $source->budget,
                                 'status'            => 'pending_contract',
                             ]);
                             $record->update(['status' => 'converted']);
@@ -335,6 +335,7 @@ class BriefResource extends Resource
     public static function getRelationManagers(): array
     {
         return [
+            RelationManagers\PlansRelationManager::class,
             RelationManagers\RevisionsRelationManager::class,
         ];
     }
