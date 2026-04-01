@@ -69,12 +69,10 @@ class BriefResource extends Resource
 
                 Forms\Components\DatePicker::make('start_date')
                     ->label('Ngày bắt đầu')
-                    ->required()
                     ->displayFormat('d/m/Y'),
 
                 Forms\Components\DatePicker::make('end_date')
                     ->label('Ngày kết thúc')
-                    ->required()
                     ->displayFormat('d/m/Y')
                     ->after('start_date'),
             ])->columns(2),
@@ -92,22 +90,10 @@ class BriefResource extends Resource
                     })
                     ->placeholder('Không bắt buộc'),
 
-                Forms\Components\TextInput::make('screen_count')
-                    ->label('Số màn hình')
-                    ->numeric()
-                    ->minValue(1)
-                    ->placeholder('Không bắt buộc'),
-
                 Forms\Components\TextInput::make('cpm')
                     ->label('CPM (VND)')
                     ->prefix('₫')
                     ->numeric()
-                    ->placeholder('Không bắt buộc'),
-
-                Forms\Components\TextInput::make('duration_days')
-                    ->label('Số ngày chạy')
-                    ->numeric()
-                    ->minValue(1)
                     ->placeholder('Không bắt buộc'),
 
                 Forms\Components\Textarea::make('note')
@@ -144,7 +130,9 @@ class BriefResource extends Resource
                         Forms\Components\TextInput::make('screen_count')
                             ->label('Số màn hình')
                             ->numeric()
-                            ->minValue(1),
+                            ->minValue(1)
+                            ->placeholder('Để trống = tất cả màn hình')
+                            ->helperText('Để trống nếu book toàn bộ màn hình của network này'),
 
                         Forms\Components\TextInput::make('note')
                             ->label('Ghi chú')
