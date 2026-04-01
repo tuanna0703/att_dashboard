@@ -209,65 +209,66 @@ class PlansRelationManager extends RelationManager
                             && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         )
                         ->form([
-                            Forms\Components\TextInput::make('campaign_name')
-                                ->label('Tên campaign')
-                                ->required()
-                                ->maxLength(200)
-                                ->columnSpan(2),
+                            Forms\Components\Grid::make(2)->schema([
+                                Forms\Components\TextInput::make('campaign_name')
+                                    ->label('Tên campaign')
+                                    ->required()
+                                    ->maxLength(200)
+                                    ->columnSpan(2),
 
-                            Forms\Components\DatePicker::make('start_date')
-                                ->label('Ngày bắt đầu')
-                                ->displayFormat('d/m/Y'),
+                                Forms\Components\DatePicker::make('start_date')
+                                    ->label('Ngày bắt đầu')
+                                    ->displayFormat('d/m/Y'),
 
-                            Forms\Components\DatePicker::make('end_date')
-                                ->label('Ngày kết thúc')
-                                ->displayFormat('d/m/Y')
-                                ->afterOrEqual('start_date'),
+                                Forms\Components\DatePicker::make('end_date')
+                                    ->label('Ngày kết thúc')
+                                    ->displayFormat('d/m/Y')
+                                    ->afterOrEqual('start_date'),
 
-                            Forms\Components\TextInput::make('budget')
-                                ->label('Ngân sách (VND)')
-                                ->prefix('₫')
-                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
-                                ->afterStateHydrated(function ($component, $state) {
-                                    if ($state !== null && $state !== '') {
-                                        $component->state(number_format((float) $state, 0, ',', '.'));
-                                    }
-                                }),
+                                Forms\Components\TextInput::make('budget')
+                                    ->label('Ngân sách (VND)')
+                                    ->prefix('₫')
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
+                                    ->afterStateHydrated(function ($component, $state) {
+                                        if ($state !== null && $state !== '') {
+                                            $component->state(number_format((float) $state, 0, ',', '.'));
+                                        }
+                                    }),
 
-                            Forms\Components\TextInput::make('cpm')
-                                ->label('CPM (VND)')
-                                ->prefix('₫')
-                                ->numeric(),
+                                Forms\Components\TextInput::make('cpm')
+                                    ->label('CPM (VND)')
+                                    ->prefix('₫')
+                                    ->numeric(),
 
-                            Forms\Components\TextInput::make('screen_count')
-                                ->label('Số màn hình')
-                                ->numeric()
-                                ->minValue(1),
+                                Forms\Components\TextInput::make('screen_count')
+                                    ->label('Số màn hình')
+                                    ->numeric()
+                                    ->minValue(1),
 
-                            Forms\Components\TextInput::make('duration_days')
-                                ->label('Số ngày chạy')
-                                ->numeric()
-                                ->minValue(1),
+                                Forms\Components\TextInput::make('duration_days')
+                                    ->label('Số ngày chạy')
+                                    ->numeric()
+                                    ->minValue(1),
 
-                            Forms\Components\Textarea::make('note')
-                                ->label('Ghi chú / Điều chỉnh so với plan cũ')
-                                ->rows(4)
-                                ->columnSpanFull(),
+                                Forms\Components\Textarea::make('note')
+                                    ->label('Ghi chú / Điều chỉnh so với plan cũ')
+                                    ->rows(4)
+                                    ->columnSpan(2),
 
-                            Forms\Components\FileUpload::make('file_path')
-                                ->label('File kế hoạch mới')
-                                ->directory('plans')
-                                ->acceptedFileTypes([
-                                    'application/pdf', 'image/*',
-                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                    'application/vnd.ms-excel',
-                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                    'application/msword',
-                                ])
-                                ->columnSpanFull(),
+                                Forms\Components\FileUpload::make('file_path')
+                                    ->label('File kế hoạch mới')
+                                    ->directory('plans')
+                                    ->acceptedFileTypes([
+                                        'application/pdf', 'image/*',
+                                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                        'application/vnd.ms-excel',
+                                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                        'application/msword',
+                                    ])
+                                    ->columnSpan(2),
+                            ]),
                         ])
-                        ->columns(2)
                         ->modalHeading('Tạo Plan điều chỉnh')
                         ->modalDescription(fn (Plan $record) => "Tạo phiên bản mới dựa trên Plan {$record->plan_no}. Lý do điều chỉnh: {$record->sale_comment}")
                         ->fillForm(fn (Plan $record) => [
