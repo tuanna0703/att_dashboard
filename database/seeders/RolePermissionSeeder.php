@@ -44,6 +44,8 @@ class RolePermissionSeeder extends Seeder
         'ad_networks.viewAny', 'ad_networks.create', 'ad_networks.update', 'ad_networks.delete',
         // Brief
         'briefs.viewAny', 'briefs.view', 'briefs.create', 'briefs.update', 'briefs.delete',
+        // Plan
+        'plans.viewAny', 'plans.view', 'plans.create', 'plans.update', 'plans.delete',
         // Booking
         'bookings.viewAny', 'bookings.view', 'bookings.update',
         // Media Buying Order
@@ -87,6 +89,7 @@ class RolePermissionSeeder extends Seeder
             // Booking module
             'ad_networks.viewAny',
             'briefs.viewAny', 'briefs.view',
+            'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
@@ -109,6 +112,7 @@ class RolePermissionSeeder extends Seeder
             // Booking module
             'ad_networks.viewAny',
             'briefs.viewAny', 'briefs.view',
+            'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
@@ -138,6 +142,7 @@ class RolePermissionSeeder extends Seeder
             'contracts.viewAny', 'contracts.view', 'contracts.create', 'contracts.update',
             'ad_networks.viewAny',
             'briefs.viewAny', 'briefs.view', 'briefs.create', 'briefs.update', 'briefs.delete',
+            'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view', 'bookings.update',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
@@ -149,6 +154,7 @@ class RolePermissionSeeder extends Seeder
             'contracts.viewAny', 'contracts.view',
             'ad_networks.viewAny',
             'briefs.viewAny', 'briefs.view', 'briefs.update',
+            'plans.viewAny', 'plans.view', 'plans.create', 'plans.update', 'plans.delete',
             'bookings.viewAny', 'bookings.view',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
             'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
