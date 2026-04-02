@@ -34,6 +34,7 @@ class BriefLineItem extends Model
         'end_date'    => 'date',
         'unit_cost'   => 'decimal:2',
         'line_budget' => 'decimal:2',
+        'targeting'   => 'array',
     ];
 
     public static array $units = [

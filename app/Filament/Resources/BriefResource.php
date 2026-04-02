@@ -80,6 +80,7 @@ class BriefResource extends Resource
                                 ->options(fn () => AdNetwork::where('is_active', true)
                                     ->orderBy('name')
                                     ->pluck('name', 'id'))
+                                ->multiple()
                                 ->searchable()
                                 ->preload()
                                 ->placeholder('Tìm và chọn network…'),
@@ -172,12 +173,14 @@ class BriefResource extends Resource
                     ->collapsible()
                     ->live()
                     ->itemLabel(function (array $state): ?string {
-                        $networkId = $state['targeting'] ?? null;
-                        $network   = $networkId ? AdNetwork::find($networkId)?->name : null;
-                        $parts = array_filter([
-                            $network,
-                            $state['format'] ?? null,
-                        ]);
+                        $networkIds = $state['targeting'] ?? [];
+                        if (is_string($networkIds)) {
+                            $networkIds = json_decode($networkIds, true) ?? [];
+                        }
+                        $networks = !empty($networkIds)
+                            ? AdNetwork::whereIn('id', (array) $networkIds)->orderBy('name')->pluck('name')->implode(', ')
+                            : null;
+                        $parts = array_filter([$networks, $state['format'] ?? null]);
                         return $parts ? implode(' — ', $parts) : 'Line item mới';
                     }),
 
