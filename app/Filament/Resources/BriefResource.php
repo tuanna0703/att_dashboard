@@ -150,17 +150,19 @@ class BriefResource extends Resource
                         Forms\Components\Section::make('Est KPI')->schema([
                             Forms\Components\TextInput::make('est_impression')
                                 ->label('Est Impression')
-                                ->numeric()
+                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
                                 ->live(onBlur: true)
                                 ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
                             Forms\Components\TextInput::make('est_impression_day')
                                 ->label('Est Impression/Day')
-                                ->numeric(),
+                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                ->live(onBlur: true),
 
                             Forms\Components\TextInput::make('est_ad_spot')
                                 ->label('Est Ad Spot')
-                                ->numeric(),
+                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                ->live(onBlur: true),
                         ])->columns(1)->columnSpan(1),
                     ])
                     ->columns(2)
@@ -270,7 +272,7 @@ class BriefResource extends Resource
         };
 
         // est_impression — nếu user không nhập thủ công thì tính từ adSpot × multiplier
-        $impression = (int) ($get('est_impression') ?? 0);
+        $impression = (int) preg_replace('/\D/', '', $get('est_impression') ?? '0');
         if ($impression === 0) {
             $impression = match ($unit) {
                 'cpm'       => $guaranteed,
