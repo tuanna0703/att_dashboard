@@ -124,8 +124,14 @@ class ViewBrief extends ViewRecord
                 TextEntry::make('adops.name')->label('AdOps')->placeholder('Chưa assign'),
                 TextEntry::make('start_date')->label('Bắt đầu')->date('d/m/Y'),
                 TextEntry::make('end_date')->label('Kết thúc')->date('d/m/Y'),
-                TextEntry::make('budget')->label('Ngân sách')->money('VND')->placeholder('—'),
-                TextEntry::make('cpm')->label('CPM')->money('VND')->placeholder('—'),
+                TextEntry::make('budget')
+                    ->label('Ngân sách')
+                    ->formatStateUsing(fn ($state, $record) => $state
+                        ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->currency ?? 'VND')
+                        : '—')
+                    ->weight('bold')
+                    ->placeholder('—'),
+                TextEntry::make('currency')->label('Tiền tệ')->placeholder('—'),
                 TextEntry::make('note')->label('Ghi chú')->placeholder('—')->columnSpanFull(),
                 TextEntry::make('file_path')
                     ->label('File đính kèm')
@@ -137,15 +143,49 @@ class ViewBrief extends ViewRecord
                     ->columnSpanFull(),
             ])->columns(4),
 
-            Section::make('Mạng lưới quảng cáo')->schema([
-                RepeatableEntry::make('briefAdNetworks')
+            Section::make('Line Items')->schema([
+                RepeatableEntry::make('briefLineItems')
                     ->label('')
                     ->schema([
-                        TextEntry::make('adNetwork.name')->label('Mạng lưới'),
-                        TextEntry::make('screen_count')->label('Số màn hình')->placeholder('—'),
-                        TextEntry::make('note')->label('Ghi chú')->placeholder('—'),
+                        TextEntry::make('platform')->label('Platform')->placeholder('—'),
+                        TextEntry::make('placement')->label('Placement')->placeholder('—'),
+                        TextEntry::make('format')->label('Format')->placeholder('—'),
+                        TextEntry::make('location')->label('Location')->placeholder('—'),
+                        TextEntry::make('targeting')->label('Targeting')->placeholder('—')->columnSpan(2),
+
+                        TextEntry::make('start_date')->label('Start')->date('d/m/Y')->placeholder('—'),
+                        TextEntry::make('end_date')->label('End')->date('d/m/Y')->placeholder('—'),
+                        TextEntry::make('live_days')->label('Live Days')->placeholder('—')->suffix(' ngày'),
+
+                        TextEntry::make('unit')
+                            ->label('Unit')
+                            ->badge()
+                            ->formatStateUsing(fn ($state) => \App\Models\BriefLineItem::$units[$state] ?? $state)
+                            ->color(fn ($state) => match ($state) {
+                                'cpm' => 'info',
+                                'cpd' => 'warning',
+                                'io'  => 'success',
+                                default => 'gray',
+                            }),
+                        TextEntry::make('guaranteed_units')
+                            ->label('Guaranteed Units')
+                            ->numeric()
+                            ->placeholder('—'),
+                        TextEntry::make('unit_cost')->label('Unit Cost')->numeric()->placeholder('—'),
+                        TextEntry::make('daily_spots')->label('Daily Spots/Screen')->placeholder('—'),
+                        TextEntry::make('line_budget')
+                            ->label('Line Budget')
+                            ->formatStateUsing(fn ($state, $record) => $state
+                                ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->brief?->currency ?? 'VND')
+                                : '—')
+                            ->weight('bold'),
+
+                        TextEntry::make('est_impression')->label('Est Impression')->numeric()->placeholder('—'),
+                        TextEntry::make('avg_multiplier')->label('Avg Multiplier')->placeholder('—'),
+                        TextEntry::make('est_impression_day')->label('Est Imp/Day')->numeric()->placeholder('—'),
+                        TextEntry::make('est_ad_spot')->label('Est Ad Spot')->numeric()->placeholder('—'),
                     ])
-                    ->columns(3),
+                    ->columns(6),
             ]),
         ]);
     }

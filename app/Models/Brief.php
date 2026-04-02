@@ -22,11 +22,10 @@ class Brief extends Model
         'objective',
         'target_audience',
         'budget',
+        'currency',
         'start_date',
         'end_date',
         'screen_count',
-        'cpm',
-        'duration_days',
         'status',
         'current_revision_id',
         'note',
@@ -37,7 +36,6 @@ class Brief extends Model
         'start_date' => 'date',
         'end_date'   => 'date',
         'budget'     => 'decimal:2',
-        'cpm'        => 'decimal:2',
     ];
 
     public static array $statuses = [
@@ -122,6 +120,11 @@ class Brief extends Model
     public function acceptedPlan(): HasOne
     {
         return $this->hasOne(Plan::class)->where('status', 'accepted')->latestOfMany();
+    }
+
+    public function briefLineItems(): HasMany
+    {
+        return $this->hasMany(BriefLineItem::class)->orderBy('sort_order');
     }
 
     public function booking(): HasOne

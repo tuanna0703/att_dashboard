@@ -4,13 +4,15 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BriefResource\Pages;
 use App\Filament\Resources\BriefResource\RelationManagers;
-use App\Models\AdNetwork;
 use App\Models\Brief;
+use App\Models\BriefLineItem;
 use App\Models\Customer;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -80,8 +82,8 @@ class BriefResource extends Resource
 
             Forms\Components\Section::make('Chi tiết yêu cầu')->schema([
                 Forms\Components\TextInput::make('budget')
-                    ->label('Ngân sách (VND)')
-                    ->prefix('₫')
+                    ->label('Tổng ngân sách')
+                    ->prefix(fn (Get $get) => $get('currency') === 'USD' ? '$' : '₫')
                     ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
                     ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
                     ->afterStateHydrated(function ($component, $state) {
@@ -89,13 +91,14 @@ class BriefResource extends Resource
                             $component->state(number_format((float) $state, 0, ',', '.'));
                         }
                     })
-                    ->placeholder('Không bắt buộc'),
+                    ->helperText('Tổng ngân sách toàn brief (có thể tổng hợp từ line items)'),
 
-                Forms\Components\TextInput::make('cpm')
-                    ->label('CPM (VND)')
-                    ->prefix('₫')
-                    ->numeric()
-                    ->placeholder('Không bắt buộc'),
+                Forms\Components\Select::make('currency')
+                    ->label('Tiền tệ')
+                    ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
+                    ->default('VND')
+                    ->required()
+                    ->live(),
 
                 Forms\Components\Textarea::make('note')
                     ->label('Ghi chú')
@@ -116,42 +119,205 @@ class BriefResource extends Resource
                     ->columnSpanFull(),
             ])->columns(2),
 
-            Forms\Components\Section::make('Mạng lưới quảng cáo')->schema([
-                Forms\Components\Repeater::make('briefAdNetworks')
-                    ->relationship('briefAdNetworks')
+            Forms\Components\Section::make('Line Items')->schema([
+                Forms\Components\Repeater::make('briefLineItems')
+                    ->relationship('briefLineItems')
                     ->label('')
                     ->schema([
-                        Forms\Components\Select::make('ad_network_id')
-                            ->label('Mạng lưới')
-                            ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
-                            ->required()
-                            ->searchable()
+                        // ── Placement info ────────────────────────────────
+                        Forms\Components\TextInput::make('platform')
+                            ->label('Platform')
+                            ->placeholder('Programmatic, Direct…')
                             ->columnSpan(2),
 
-                        Forms\Components\TextInput::make('screen_count')
-                            ->label('Số màn hình')
-                            ->numeric()
-                            ->minValue(1)
-                            ->placeholder('Để trống = tất cả màn hình')
-                            ->helperText('Để trống nếu book toàn bộ màn hình của network này'),
+                        Forms\Components\TextInput::make('placement')
+                            ->label('Placement')
+                            ->placeholder('Digital OOH…')
+                            ->columnSpan(2),
 
-                        Forms\Components\TextInput::make('note')
-                            ->label('Ghi chú')
+                        Forms\Components\TextInput::make('format')
+                            ->label('Format')
+                            ->placeholder('1TVC 15s…')
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('location')
+                            ->label('Location')
+                            ->placeholder('Vietnam, HCM…')
+                            ->columnSpan(2),
+
+                        Forms\Components\Textarea::make('targeting')
+                            ->label('Targeting')
+                            ->placeholder('Shopping Malls: AEON MALL…')
+                            ->rows(1)
+                            ->columnSpanFull(),
+
+                        // ── Dates ─────────────────────────────────────────
+                        Forms\Components\DatePicker::make('start_date')
+                            ->label('Start Date')
+                            ->displayFormat('d/m/Y')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\DatePicker::make('end_date')
+                            ->label('End Date')
+                            ->displayFormat('d/m/Y')
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('live_days')
+                            ->label('Live Days')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(true)
+                            ->columnSpan(2),
+
+                        // ── Buying model ──────────────────────────────────
+                        Forms\Components\Select::make('unit')
+                            ->label('Unit')
+                            ->options(BriefLineItem::$units)
+                            ->default('cpm')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('guaranteed_units')
+                            ->label(fn (Get $get) => match ($get('unit')) {
+                                'cpm'   => 'Guaranteed Impressions',
+                                'cpd'   => 'Số màn hình',
+                                'io'    => 'Spots/Day',
+                                default => 'Guaranteed Units',
+                            })
+                            ->numeric()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('unit_cost')
+                            ->label(fn (Get $get) => match ($get('unit')) {
+                                'cpm'   => 'CPM Rate',
+                                'cpd'   => 'Rate/Screen/Day',
+                                'io'    => 'Rate/Spot',
+                                default => 'Unit Cost',
+                            })
+                            ->numeric()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('daily_spots')
+                            ->label('Daily Spots/Screen')
+                            ->helperText('Số spot/màn hình/ngày')
+                            ->numeric()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->hidden(fn (Get $get) => $get('unit') !== 'cpd')
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('line_budget')
+                            ->label('Line Budget')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(true)
+                            ->columnSpan(fn (Get $get) => $get('unit') === 'cpd' ? 2 : 4),
+
+                        // ── Est KPI ───────────────────────────────────────
+                        Forms\Components\TextInput::make('est_impression')
+                            ->label('Est Impression')
+                            ->numeric()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('avg_multiplier')
+                            ->label('Avg Multiplier')
+                            ->numeric()
+                            ->default(1)
+                            ->minValue(1)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('est_impression_day')
+                            ->label('Est Impression/Day')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(true)
+                            ->columnSpan(2),
+
+                        Forms\Components\TextInput::make('est_ad_spot')
+                            ->label('Est Ad Spot')
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(true)
                             ->columnSpan(2),
                     ])
-                    ->columns(5)
-                    ->addActionLabel('+ Thêm mạng lưới')
+                    ->columns(8)
+                    ->addActionLabel('+ Thêm line item')
                     ->defaultItems(0)
+                    ->reorderable('sort_order')
                     ->collapsible()
                     ->itemLabel(function (array $state): ?string {
-                        $networkId = $state['ad_network_id'] ?? null;
-                        if (! $networkId) return null;
-                        $network = AdNetwork::find($networkId);
-                        $screens = $state['screen_count'] ?? null;
-                        return $network?->name . ($screens ? " — {$screens} màn hình" : '');
+                        $parts = array_filter([
+                            $state['platform'] ?? null,
+                            $state['placement'] ?? null,
+                            $state['targeting'] ?? null,
+                        ]);
+                        return $parts ? implode(' — ', $parts) : 'Line item mới';
                     }),
             ]),
         ]);
+    }
+
+    private static function recalcLineItem(Get $get, Set $set): void
+    {
+        $unit       = $get('unit') ?? 'cpm';
+        $guaranteed = (int) ($get('guaranteed_units') ?? 0);
+        $unitCost   = (float) ($get('unit_cost') ?? 0);
+        $dailySpots = (int) ($get('daily_spots') ?? 0);
+        $multiplier = max(1, (int) ($get('avg_multiplier') ?? 1));
+
+        // live_days từ date range
+        $start    = $get('start_date');
+        $end      = $get('end_date');
+        $liveDays = 0;
+        if ($start && $end) {
+            $liveDays = max(0, Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1);
+            $set('live_days', $liveDays);
+        }
+
+        // line_budget
+        $budget = match ($unit) {
+            'cpm'   => ($guaranteed / 1000) * $unitCost,          // impressions/1000 × CPM rate
+            'cpd'   => $guaranteed * $unitCost * $liveDays,        // screens × rate/screen/day × days
+            'io'    => $guaranteed * $liveDays * $unitCost,        // spots/day × days × rate/spot
+            default => 0,
+        };
+        $set('line_budget', round($budget, 2));
+
+        // est_ad_spot
+        $adSpot = match ($unit) {
+            'cpm'   => $multiplier > 0 ? (int) round($guaranteed / $multiplier) : 0,
+            'cpd'   => $guaranteed * $dailySpots * $liveDays,
+            'io'    => $guaranteed * $liveDays,
+            default => 0,
+        };
+
+        // est_impression — nếu user không nhập thủ công thì tính từ adSpot × multiplier
+        $impression = (int) ($get('est_impression') ?? 0);
+        if ($impression === 0) {
+            $impression = match ($unit) {
+                'cpm'       => $guaranteed,
+                'cpd', 'io' => $adSpot * $multiplier,
+                default     => 0,
+            };
+            $set('est_impression', $impression);
+        }
+
+        $set('est_ad_spot', $adSpot);
+        $set('est_impression_day', $liveDays > 0 ? (int) round($impression / $liveDays) : 0);
     }
 
     public static function table(Table $table): Table
@@ -193,8 +359,9 @@ class BriefResource extends Resource
 
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Ngân sách')
-                    ->money('VND')
-                    ->placeholder('—')
+                    ->formatStateUsing(fn ($state, $record) => $state
+                        ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->currency ?? 'VND')
+                        : '—')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('revisions_count')
