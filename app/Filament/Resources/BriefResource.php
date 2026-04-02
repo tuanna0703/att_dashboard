@@ -78,34 +78,19 @@ class BriefResource extends Resource
                     ->label('')
                     ->schema([
                         // ── Placement info ────────────────────────────────
-                        Forms\Components\TextInput::make('platform')
-                            ->label('Platform')
-                            ->placeholder('Programmatic, Direct…')
-                            ->columnSpan(2),
-
-                        Forms\Components\TextInput::make('placement')
-                            ->label('Placement')
-                            ->placeholder('Digital OOH…')
-                            ->columnSpan(2),
-
-                        Forms\Components\TextInput::make('format')
+                        Forms\Components\Select::make('format')
                             ->label('Format')
-                            ->placeholder('1TVC 15s…')
-                            ->columnSpan(2),
-
-                        Forms\Components\TextInput::make('location')
-                            ->label('Location')
-                            ->placeholder('Vietnam, HCM…')
-                            ->columnSpan(2),
+                            ->options(['6s' => '6s', '15s' => '15s', '30s' => '30s'])
+                            ->placeholder('Chọn format…')
+                            ->columnSpan(4),
 
                         Forms\Components\Select::make('targeting')
-                            ->label('Targeting (Networks)')
+                            ->label('Network')
                             ->options(
                                 AdNetwork::where('is_active', true)
                                     ->orderBy('name')
                                     ->pluck('name', 'id')
                             )
-                            ->multiple()
                             ->searchable()
                             ->placeholder('Tìm và chọn network…')
                             ->columnSpanFull(),
@@ -144,7 +129,6 @@ class BriefResource extends Resource
 
                         Forms\Components\TextInput::make('guaranteed_units')
                             ->label(fn (Get $get) => match ($get('unit')) {
-                                'cpm'   => 'Guaranteed Impressions',
                                 'cpd'   => 'Số màn hình',
                                 'io'    => 'Spots/Day',
                                 default => 'Guaranteed Units',
@@ -156,7 +140,6 @@ class BriefResource extends Resource
 
                         Forms\Components\TextInput::make('unit_cost')
                             ->label(fn (Get $get) => match ($get('unit')) {
-                                'cpm'   => 'CPM Rate',
                                 'cpd'   => 'Rate/Screen/Day',
                                 'io'    => 'Rate/Spot',
                                 default => 'Unit Cost',
@@ -190,15 +173,6 @@ class BriefResource extends Resource
                             ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
                             ->columnSpan(2),
 
-                        Forms\Components\TextInput::make('avg_multiplier')
-                            ->label('Avg Multiplier')
-                            ->numeric()
-                            ->default(1)
-                            ->minValue(1)
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
-
                         Forms\Components\TextInput::make('est_impression_day')
                             ->label('Est Impression/Day')
                             ->numeric()
@@ -220,10 +194,11 @@ class BriefResource extends Resource
                     ->collapsible()
                     ->live()
                     ->itemLabel(function (array $state): ?string {
+                        $networkId = $state['targeting'] ?? null;
+                        $network   = $networkId ? AdNetwork::find($networkId)?->name : null;
                         $parts = array_filter([
-                            $state['platform'] ?? null,
-                            $state['placement'] ?? null,
-                            $state['targeting'] ?? null,
+                            $network,
+                            $state['format'] ?? null,
                         ]);
                         return $parts ? implode(' — ', $parts) : 'Line item mới';
                     }),
@@ -290,7 +265,7 @@ class BriefResource extends Resource
         $guaranteed = (int) ($get('guaranteed_units') ?? 0);
         $unitCost   = (float) ($get('unit_cost') ?? 0);
         $dailySpots = (int) ($get('daily_spots') ?? 0);
-        $multiplier = max(1, (int) ($get('avg_multiplier') ?? 1));
+        $multiplier = 1;
 
         // live_days từ date range
         $start    = $get('start_date');
