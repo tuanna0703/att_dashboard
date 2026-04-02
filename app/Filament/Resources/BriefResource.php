@@ -17,6 +17,7 @@ use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
+use Illuminate\Support\HtmlString;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -221,27 +222,37 @@ class BriefResource extends Resource
                     }),
 
                 // ── Footer: currency + running total ──────────────────────────
-                Forms\Components\Grid::make(4)->schema([
-                    Forms\Components\Select::make('currency')
-                        ->label('Tiền tệ')
-                        ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
-                        ->default('VND')
-                        ->required()
-                        ->live()
-                        ->columnSpan(1),
+                Forms\Components\Grid::make(4)
+                    ->schema([
+                        Forms\Components\Select::make('currency')
+                            ->label('Tiền tệ')
+                            ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
+                            ->default('VND')
+                            ->required()
+                            ->live()
+                            ->columnSpan(1),
 
-                    Forms\Components\Placeholder::make('budget_display')
-                        ->label('Tổng ngân sách')
-                        ->content(function (Get $get): string {
-                            $items    = $get('briefLineItems') ?? [];
-                            $total    = collect($items)->sum(fn ($item) => (float) ($item['line_budget'] ?? 0));
-                            $currency = $get('currency') ?? 'VND';
-                            return $total > 0
-                                ? number_format($total, 0, ',', '.') . ' ' . $currency
-                                : '—';
-                        })
-                        ->columnSpan(3),
-                ])->columnSpanFull(),
+                        Forms\Components\Placeholder::make('budget_display')
+                            ->label('Tổng ngân sách')
+                            ->content(function (Get $get): HtmlString {
+                                $items    = $get('briefLineItems') ?? [];
+                                $total    = collect($items)->sum(fn ($item) => (float) ($item['line_budget'] ?? 0));
+                                $currency = $get('currency') ?? 'VND';
+                                $formatted = $total > 0
+                                    ? number_format($total, 0, ',', '.') . ' ' . $currency
+                                    : '—';
+                                return new HtmlString(
+                                    '<span class="text-xl font-bold text-primary-600 dark:text-primary-400">'
+                                    . e($formatted) .
+                                    '</span>'
+                                );
+                            })
+                            ->columnSpan(3),
+                    ])
+                    ->columnSpanFull()
+                    ->extraAttributes([
+                        'class' => 'border-t border-gray-200 dark:border-gray-700 pt-4 mt-2',
+                    ]),
             ]),
 
             Forms\Components\Section::make('Chi tiết yêu cầu')->schema([
