@@ -61,129 +61,109 @@ class BriefResource extends Resource
                         ->searchable()
                         ->placeholder('Chưa assign'),
                 ])->columnSpanFull(),
-
-                Forms\Components\DatePicker::make('start_date')
-                    ->label('Ngày bắt đầu')
-                    ->displayFormat('d/m/Y'),
-
-                Forms\Components\DatePicker::make('end_date')
-                    ->label('Ngày kết thúc')
-                    ->displayFormat('d/m/Y')
-                    ->afterOrEqual('start_date'),
-            ])->columns(2),
+            ]),
 
             Forms\Components\Section::make('Line Items')->schema([
                 Forms\Components\Repeater::make('briefLineItems')
                     ->relationship('briefLineItems')
                     ->label('')
                     ->schema([
-                        // ── Placement info ────────────────────────────────
-                        Forms\Components\Select::make('format')
-                            ->label('Format')
-                            ->options(['6s' => '6s', '15s' => '15s', '30s' => '30s'])
-                            ->placeholder('Chọn format…')
-                            ->columnSpan(2),
+                        // ── Cột trái: thông tin booking ───────────────────
+                        Forms\Components\Section::make()->schema([
+                            Forms\Components\Select::make('format')
+                                ->label('Format')
+                                ->options(['6s' => '6s', '15s' => '15s', '30s' => '30s'])
+                                ->placeholder('Chọn format…'),
 
-                        Forms\Components\Select::make('targeting')
-                            ->label('Network')
-                            ->options(
-                                AdNetwork::where('is_active', true)
+                            Forms\Components\Select::make('targeting')
+                                ->label('Network')
+                                ->options(fn () => AdNetwork::where('is_active', true)
                                     ->orderBy('name')
-                                    ->pluck('name', 'id')
-                            )
-                            ->searchable()
-                            ->placeholder('Tìm và chọn network…')
-                            ->columnSpan(6),
+                                    ->pluck('name', 'id'))
+                                ->searchable()
+                                ->preload()
+                                ->placeholder('Tìm và chọn network…'),
 
-                        // ── Dates ─────────────────────────────────────────
-                        Forms\Components\DatePicker::make('start_date')
-                            ->label('Start Date')
-                            ->displayFormat('d/m/Y')
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
+                            Forms\Components\DatePicker::make('start_date')
+                                ->label('Start Date')
+                                ->displayFormat('d/m/Y')
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
-                        Forms\Components\DatePicker::make('end_date')
-                            ->label('End Date')
-                            ->displayFormat('d/m/Y')
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
+                            Forms\Components\DatePicker::make('end_date')
+                                ->label('End Date')
+                                ->displayFormat('d/m/Y')
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
-                        Forms\Components\TextInput::make('live_days')
-                            ->label('Live Days')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->columnSpan(2),
+                            Forms\Components\TextInput::make('live_days')
+                                ->label('Live Days')
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated(true),
 
-                        // ── Buying model ──────────────────────────────────
-                        Forms\Components\Select::make('unit')
-                            ->label('Unit')
-                            ->options(BriefLineItem::$units)
-                            ->default('cpm')
-                            ->required()
-                            ->live()
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
+                            Forms\Components\Select::make('unit')
+                                ->label('Unit')
+                                ->options(BriefLineItem::$units)
+                                ->default('cpm')
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
-                        Forms\Components\TextInput::make('guaranteed_units')
-                            ->label(fn (Get $get) => match ($get('unit')) {
-                                'cpd'   => 'Số màn hình',
-                                'io'    => 'Spots/Day',
-                                default => 'Guaranteed Units',
-                            })
-                            ->numeric()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
+                            Forms\Components\TextInput::make('guaranteed_units')
+                                ->label(fn (Get $get) => match ($get('unit')) {
+                                    'cpd'   => 'Số màn hình',
+                                    'io'    => 'Spots/Day',
+                                    default => 'Guaranteed Units',
+                                })
+                                ->numeric()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
-                        Forms\Components\TextInput::make('unit_cost')
-                            ->label(fn (Get $get) => match ($get('unit')) {
-                                'cpd'   => 'Rate/Screen/Day',
-                                'io'    => 'Rate/Spot',
-                                default => 'Unit Cost',
-                            })
-                            ->numeric()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
+                            Forms\Components\TextInput::make('unit_cost')
+                                ->label(fn (Get $get) => match ($get('unit')) {
+                                    'cpd'   => 'Rate/Screen/Day',
+                                    'io'    => 'Rate/Spot',
+                                    default => 'Unit Cost',
+                                })
+                                ->numeric()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
-                        Forms\Components\TextInput::make('daily_spots')
-                            ->label('Daily Spots/Screen')
-                            ->helperText('Số spot/màn hình/ngày')
-                            ->numeric()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->hidden(fn (Get $get) => $get('unit') !== 'cpd')
-                            ->columnSpan(2),
+                            Forms\Components\TextInput::make('daily_spots')
+                                ->label('Daily Spots/Screen')
+                                ->helperText('Số spot/màn hình/ngày')
+                                ->numeric()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
+                                ->hidden(fn (Get $get) => $get('unit') !== 'cpd'),
 
-                        Forms\Components\TextInput::make('line_budget')
-                            ->label('Budget')
-                            ->numeric()
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->columnSpan(fn (Get $get) => $get('unit') === 'cpd' ? 2 : 4),
+                            Forms\Components\TextInput::make('line_budget')
+                                ->label('Budget')
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated(true)
+                                ->columnSpanFull(),
+                        ])->columns(2)->columnSpan(1),
 
-                        // ── Est KPI ───────────────────────────────────────
-                        Forms\Components\TextInput::make('est_impression')
-                            ->label('Est Impression')
-                            ->numeric()
-                            ->live(onBlur: true)
-                            ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set))
-                            ->columnSpan(2),
+                        // ── Cột phải: Est KPI ──────────────────────────────
+                        Forms\Components\Section::make('Est KPI')->schema([
+                            Forms\Components\TextInput::make('est_impression')
+                                ->label('Est Impression')
+                                ->numeric()
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
 
-                        Forms\Components\TextInput::make('est_impression_day')
-                            ->label('Est Impression/Day')
-                            ->numeric()
-                            ->columnSpan(2),
+                            Forms\Components\TextInput::make('est_impression_day')
+                                ->label('Est Impression/Day')
+                                ->numeric(),
 
-                        Forms\Components\TextInput::make('est_ad_spot')
-                            ->label('Est Ad Spot')
-                            ->numeric()
-                            ->columnSpan(2),
+                            Forms\Components\TextInput::make('est_ad_spot')
+                                ->label('Est Ad Spot')
+                                ->numeric(),
+                        ])->columns(1)->columnSpan(1),
                     ])
-                    ->columns(8)
+                    ->columns(2)
                     ->addActionLabel('+ Thêm line item')
                     ->defaultItems(0)
                     ->reorderable('sort_order')
