@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\BriefResource\RelationManagers;
 
 use App\Filament\Resources\BriefResource;
+use App\Filament\Resources\PlanResource;
 use App\Models\Plan;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -196,6 +197,12 @@ class PlansRelationManager extends RelationManager
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
+
+                    Tables\Actions\Action::make('view_plan_detail')
+                        ->label('Xem chi tiết & Line items')
+                        ->icon('heroicon-o-clipboard-document-list')
+                        ->color('info')
+                        ->url(fn (Plan $record) => PlanResource::getUrl('view', ['record' => $record])),
 
                     Tables\Actions\EditAction::make()
                         ->visible(fn (Plan $record) => $record->status === 'draft'),
