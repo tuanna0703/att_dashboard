@@ -33,23 +33,11 @@ class BriefResource extends Resource
     {
         return $form->schema([
             Forms\Components\Section::make('Thông tin campaign')->schema([
-                Forms\Components\TextInput::make('brief_no')
-                    ->label('Mã Brief')
-                    ->placeholder('Tự động tạo')
-                    ->disabled()
-                    ->dehydrated(false),
-
-                Forms\Components\Select::make('status')
-                    ->label('Trạng thái')
-                    ->options(Brief::$statuses)
-                    ->disabled()
-                    ->dehydrated(false),
-
                 Forms\Components\TextInput::make('campaign_name')
                     ->label('Tên campaign')
                     ->required()
                     ->maxLength(200)
-                    ->columnSpan(2),
+                    ->columnSpanFull(),
 
                 Forms\Components\Grid::make(3)->schema([
                     Forms\Components\Select::make('customer_id')
@@ -80,45 +68,6 @@ class BriefResource extends Resource
                     ->label('Ngày kết thúc')
                     ->displayFormat('d/m/Y')
                     ->afterOrEqual('start_date'),
-            ])->columns(2),
-
-            Forms\Components\Section::make('Chi tiết yêu cầu')->schema([
-                Forms\Components\TextInput::make('budget')
-                    ->label('Tổng ngân sách')
-                    ->disabled()
-                    ->dehydrated(false)
-                    ->afterStateHydrated(function ($component, $state, $record) {
-                        if ($state !== null && $state !== '') {
-                            $currency = $record?->currency ?? 'VND';
-                            $component->state(number_format((float) $state, 0, ',', '.') . ' ' . $currency);
-                        }
-                    })
-                    ->helperText('Tự động tính từ tổng line_budget của các line items'),
-
-                Forms\Components\Select::make('currency')
-                    ->label('Tiền tệ')
-                    ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
-                    ->default('VND')
-                    ->required()
-                    ->live(),
-
-                Forms\Components\Textarea::make('note')
-                    ->label('Ghi chú')
-                    ->rows(2)
-                    ->columnSpanFull(),
-
-                Forms\Components\FileUpload::make('file_path')
-                    ->label('File đính kèm (brief gốc từ khách)')
-                    ->directory('briefs/attachments')
-                    ->acceptedFileTypes([
-                        'application/pdf',
-                        'image/*',
-                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                        'application/vnd.ms-excel',
-                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                        'application/msword',
-                    ])
-                    ->columnSpanFull(),
             ])->columns(2),
 
             Forms\Components\Section::make('Line Items')->schema([
@@ -261,6 +210,7 @@ class BriefResource extends Resource
                     ->defaultItems(0)
                     ->reorderable('sort_order')
                     ->collapsible()
+                    ->live()
                     ->itemLabel(function (array $state): ?string {
                         $parts = array_filter([
                             $state['platform'] ?? null,
@@ -269,6 +219,49 @@ class BriefResource extends Resource
                         ]);
                         return $parts ? implode(' — ', $parts) : 'Line item mới';
                     }),
+
+                // ── Footer: currency + running total ──────────────────────────
+                Forms\Components\Grid::make(4)->schema([
+                    Forms\Components\Select::make('currency')
+                        ->label('Tiền tệ')
+                        ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
+                        ->default('VND')
+                        ->required()
+                        ->live()
+                        ->columnSpan(1),
+
+                    Forms\Components\Placeholder::make('budget_display')
+                        ->label('Tổng ngân sách')
+                        ->content(function (Get $get): string {
+                            $items    = $get('briefLineItems') ?? [];
+                            $total    = collect($items)->sum(fn ($item) => (float) ($item['line_budget'] ?? 0));
+                            $currency = $get('currency') ?? 'VND';
+                            return $total > 0
+                                ? number_format($total, 0, ',', '.') . ' ' . $currency
+                                : '—';
+                        })
+                        ->columnSpan(3),
+                ])->columnSpanFull(),
+            ]),
+
+            Forms\Components\Section::make('Chi tiết yêu cầu')->schema([
+                Forms\Components\Textarea::make('note')
+                    ->label('Ghi chú')
+                    ->rows(2)
+                    ->columnSpanFull(),
+
+                Forms\Components\FileUpload::make('file_path')
+                    ->label('File đính kèm (brief gốc từ khách)')
+                    ->directory('briefs/attachments')
+                    ->acceptedFileTypes([
+                        'application/pdf',
+                        'image/*',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        'application/msword',
+                    ])
+                    ->columnSpanFull(),
             ]),
         ]);
     }
