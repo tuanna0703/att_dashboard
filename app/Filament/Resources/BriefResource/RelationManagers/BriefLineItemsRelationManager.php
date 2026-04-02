@@ -33,6 +33,7 @@ class BriefLineItemsRelationManager extends RelationManager
                     ->formatStateUsing(function ($state) {
                         if (empty($state)) return '—';
                         $ids = is_array($state) ? $state : (json_decode($state, true) ?? []);
+                        $ids = (array) $ids;
                         return AdNetwork::whereIn('id', $ids)->orderBy('name')->pluck('name')->implode(', ');
                     }),
 
@@ -66,6 +67,7 @@ class BriefLineItemsRelationManager extends RelationManager
                     ->formatStateUsing(function ($state) {
                         if (empty($state)) return '—';
                         $ids = is_array($state) ? $state : (json_decode($state, true) ?? []);
+                        $ids = (array) $ids;
                         return AdNetwork::whereIn('id', $ids)->orderBy('name')->pluck('name')->implode(', ');
                     })
                     ->description(fn ($record) => $record->format ?? '')
