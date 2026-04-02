@@ -119,7 +119,7 @@ class ViewBrief extends ViewRecord
                     ->label('Tên Campaign')
                     ->weight('bold')
                     ->size(TextEntry\TextEntrySize::Large)
-                    ->description(fn ($record) => $record->brief_no)
+                    ->hint(fn ($record) => $record->brief_no)
                     ->columnSpan(1),
 
                 TextEntry::make('status')
