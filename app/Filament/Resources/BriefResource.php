@@ -152,8 +152,7 @@ class BriefResource extends Resource
                             Forms\Components\TextInput::make('est_impression')
                                 ->label('Est Impression')
                                 ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcLineItem($get, $set)),
+                                ->live(onBlur: true),
 
                             Forms\Components\TextInput::make('est_impression_day')
                                 ->label('Est Impression/Day')
@@ -246,7 +245,6 @@ class BriefResource extends Resource
         $guaranteed = (int) ($get('guaranteed_units') ?? 0);
         $unitCost   = (float) ($get('unit_cost') ?? 0);
         $dailySpots = (int) ($get('daily_spots') ?? 0);
-        $multiplier = 1;
 
         // live_days từ date range
         $start    = $get('start_date');
@@ -266,27 +264,6 @@ class BriefResource extends Resource
         };
         $set('line_budget', round($budget, 2));
 
-        // est_ad_spot
-        $adSpot = match ($unit) {
-            'cpm'   => $multiplier > 0 ? (int) round($guaranteed / $multiplier) : 0,
-            'cpd'   => $guaranteed * $dailySpots * $liveDays,
-            'io'    => $guaranteed * $liveDays,
-            default => 0,
-        };
-
-        // est_impression — nếu user không nhập thủ công thì tính từ adSpot × multiplier
-        $impression = (int) preg_replace('/\D/', '', $get('est_impression') ?? '0');
-        if ($impression === 0) {
-            $impression = match ($unit) {
-                'cpm'       => $guaranteed,
-                'cpd', 'io' => $adSpot * $multiplier,
-                default     => 0,
-            };
-            $set('est_impression', $impression);
-        }
-
-        $set('est_ad_spot', $adSpot);
-        $set('est_impression_day', $liveDays > 0 ? (int) round($impression / $liveDays) : 0);
     }
 
     public static function table(Table $table): Table
