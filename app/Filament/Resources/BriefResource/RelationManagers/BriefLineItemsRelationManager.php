@@ -30,11 +30,10 @@ class BriefLineItemsRelationManager extends RelationManager
             Section::make()->schema([
                 TextEntry::make('targeting')
                     ->label('Network')
-                    ->formatStateUsing(function ($state) {
-                        if (empty($state)) return '—';
-                        $ids = is_array($state) ? $state : (json_decode($state, true) ?? []);
-                        $ids = (array) $ids;
-                        return AdNetwork::whereIn('id', $ids)->orderBy('name')->pluck('name')->implode(', ');
+                    ->getStateUsing(function ($record) {
+                        $ids = $record->targeting ?? [];
+                        if (empty($ids)) return '—';
+                        return AdNetwork::whereIn('id', (array) $ids)->orderBy('name')->pluck('name')->implode(', ');
                     }),
 
                 TextEntry::make('format')->label('Format')->placeholder('—'),
@@ -64,11 +63,10 @@ class BriefLineItemsRelationManager extends RelationManager
             ->columns([
                 TextColumn::make('targeting')
                     ->label('Network / Format')
-                    ->formatStateUsing(function ($state) {
-                        if (empty($state)) return '—';
-                        $ids = is_array($state) ? $state : (json_decode($state, true) ?? []);
-                        $ids = (array) $ids;
-                        return AdNetwork::whereIn('id', $ids)->orderBy('name')->pluck('name')->implode(', ');
+                    ->getStateUsing(function ($record) {
+                        $ids = $record->targeting ?? [];
+                        if (empty($ids)) return '—';
+                        return AdNetwork::whereIn('id', (array) $ids)->orderBy('name')->pluck('name')->implode(', ');
                     })
                     ->description(fn ($record) => $record->format ?? '')
                     ->wrap(),
