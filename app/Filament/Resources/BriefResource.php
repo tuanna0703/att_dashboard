@@ -159,7 +159,7 @@ class BriefResource extends Resource
                             ->columnSpan(2),
 
                         Forms\Components\TextInput::make('line_budget')
-                            ->label('Line Budget')
+                            ->label('Budget')
                             ->numeric()
                             ->disabled()
                             ->dehydrated(true)
@@ -176,15 +176,11 @@ class BriefResource extends Resource
                         Forms\Components\TextInput::make('est_impression_day')
                             ->label('Est Impression/Day')
                             ->numeric()
-                            ->disabled()
-                            ->dehydrated(true)
                             ->columnSpan(2),
 
                         Forms\Components\TextInput::make('est_ad_spot')
                             ->label('Est Ad Spot')
                             ->numeric()
-                            ->disabled()
-                            ->dehydrated(true)
                             ->columnSpan(2),
                     ])
                     ->columns(8)
