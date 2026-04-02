@@ -18,7 +18,9 @@ use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -234,6 +236,17 @@ class BriefResource extends Resource
                         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                         'application/msword',
                     ])
+                    ->getUploadedFileNameForStorageUsing(function (TemporaryUploadedFile $file): string {
+                        $name = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                        $ext  = $file->getClientOriginalExtension();
+                        $filename = $ext ? "{$name}.{$ext}" : $name;
+
+                        if (Storage::disk('public')->exists("briefs/attachments/{$filename}")) {
+                            $filename = $ext ? "{$name}_" . rand(1000, 9999) . ".{$ext}" : "{$name}_" . rand(1000, 9999);
+                        }
+
+                        return $filename;
+                    })
                     ->columnSpanFull(),
             ]),
         ]);

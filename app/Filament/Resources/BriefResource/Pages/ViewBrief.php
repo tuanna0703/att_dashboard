@@ -3,20 +3,20 @@
 namespace App\Filament\Resources\BriefResource\Pages;
 
 use App\Filament\Resources\BriefResource;
+use App\Filament\Resources\BriefResource\RelationManagers\BriefLineItemsRelationManager;
 use App\Models\Brief;
 use App\Models\User;
 use Filament\Actions;
 use Filament\Forms;
-use Filament\Infolists\Components\Grid;
-use Filament\Notifications\Actions\Action as NotifAction;
-use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\Actions as InfolistActions;
+use Filament\Infolists\Components\Actions\Action as InfolistAction;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
-use Illuminate\Support\Facades\Storage;
+use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Facades\Storage;
 
 class ViewBrief extends ViewRecord
 {
@@ -24,7 +24,10 @@ class ViewBrief extends ViewRecord
 
     public function getRelationManagers(): array
     {
-        return BriefResource::getRelationManagers();
+        return [
+            BriefLineItemsRelationManager::class,
+            ...BriefResource::getRelationManagers(),
+        ];
     }
 
     protected function getHeaderActions(): array
@@ -41,7 +44,7 @@ class ViewBrief extends ViewRecord
                 ->form([
                     Forms\Components\Select::make('adops_id')
                         ->label('Assign cho AdOps')
-                        ->options(\App\Models\User::orderBy('name')->pluck('name', 'id'))
+                        ->options(User::orderBy('name')->pluck('name', 'id'))
                         ->required()
                         ->searchable(),
                 ])
@@ -52,7 +55,6 @@ class ViewBrief extends ViewRecord
                     ]);
                     Notification::make()->title('Đã gửi Brief cho AdOps')->success()->send();
 
-                    // Gửi DB notification cho AdOps
                     $adopsUser = User::find($data['adops_id']);
                     if ($adopsUser) {
                         Notification::make()
@@ -80,12 +82,11 @@ class ViewBrief extends ViewRecord
                 ->modalHeading('Chuyển Brief thành Booking?')
                 ->modalDescription('Revision is_final sẽ được áp dụng cho Booking.')
                 ->action(function () {
-                    $brief        = $this->record;
-                    $acceptedPlan = $brief->plans()->where('status', 'accepted')->latest()->first();
+                    $brief         = $this->record;
+                    $acceptedPlan  = $brief->plans()->where('status', 'accepted')->latest()->first();
                     $finalRevision = $brief->revisions()->where('is_final', true)->first();
-
-                    // Lấy data từ accepted Plan nếu có, fallback về Brief
-                    $source = $acceptedPlan ?? $brief;
+                    $source        = $acceptedPlan ?? $brief;
+                    $lineItems     = $brief->briefLineItems;
 
                     $booking = \App\Models\Booking::create([
                         'brief_id'          => $brief->id,
@@ -95,8 +96,8 @@ class ViewBrief extends ViewRecord
                         'sale_id'           => $brief->sale_id,
                         'adops_id'          => $brief->adops_id,
                         'campaign_name'     => $source->campaign_name,
-                        'start_date'        => $source->start_date,
-                        'end_date'          => $source->end_date,
+                        'start_date'        => $lineItems->min('start_date'),
+                        'end_date'          => $lineItems->max('end_date'),
                         'total_budget'      => $source->budget,
                         'status'            => 'pending_contract',
                     ]);
@@ -111,82 +112,61 @@ class ViewBrief extends ViewRecord
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
-            Section::make('Thông tin Campaign')->schema([
-                TextEntry::make('brief_no')->label('Mã Brief')->weight('bold')->copyable(),
+            // ── Header: Row 1 + Row 2 ────────────────────────────────────────
+            Section::make()->schema([
+                // Row 1
+                TextEntry::make('campaign_name')
+                    ->label('Tên Campaign')
+                    ->weight('bold')
+                    ->size(TextEntry\TextEntrySize::Large)
+                    ->description(fn ($record) => $record->brief_no)
+                    ->columnSpan(1),
+
                 TextEntry::make('status')
                     ->label('Trạng thái')
                     ->badge()
                     ->formatStateUsing(fn ($state) => Brief::$statuses[$state] ?? $state)
                     ->color(fn ($state) => Brief::$statusColors[$state] ?? 'gray'),
-                TextEntry::make('campaign_name')->label('Tên Campaign')->columnSpan(2),
-                TextEntry::make('customer.name')->label('Khách hàng'),
-                TextEntry::make('sale.name')->label('Sale'),
-                TextEntry::make('adops.name')->label('AdOps')->placeholder('Chưa assign'),
-                TextEntry::make('start_date')->label('Bắt đầu')->date('d/m/Y'),
-                TextEntry::make('end_date')->label('Kết thúc')->date('d/m/Y'),
+
+                TextEntry::make('customer.name')
+                    ->label('Khách hàng'),
+
                 TextEntry::make('budget')
                     ->label('Ngân sách')
+                    ->weight('bold')
                     ->formatStateUsing(fn ($state, $record) => $state
                         ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->currency ?? 'VND')
                         : '—')
-                    ->weight('bold')
                     ->placeholder('—'),
-                TextEntry::make('currency')->label('Tiền tệ')->placeholder('—'),
-                TextEntry::make('note')->label('Ghi chú')->placeholder('—')->columnSpanFull(),
-                TextEntry::make('file_path')
-                    ->label('File đính kèm')
-                    ->formatStateUsing(fn ($state) => $state ? basename($state) : null)
-                    ->placeholder('Không có file')
-                    ->url(fn ($state) => $state ? Storage::url($state) : null)
-                    ->openUrlInNewTab()
-                    ->icon('heroicon-o-paper-clip')
-                    ->columnSpanFull(),
+
+                // Row 2
+                TextEntry::make('sale.name')
+                    ->label('Sale')
+                    ->columnSpan(2),
+
+                TextEntry::make('adops.name')
+                    ->label('AdOps')
+                    ->placeholder('Chưa assign')
+                    ->columnSpan(2),
             ])->columns(4),
 
-            Section::make('Line Items')->schema([
-                RepeatableEntry::make('briefLineItems')
-                    ->label('')
-                    ->schema([
-                        TextEntry::make('platform')->label('Platform')->placeholder('—'),
-                        TextEntry::make('placement')->label('Placement')->placeholder('—'),
-                        TextEntry::make('format')->label('Format')->placeholder('—'),
-                        TextEntry::make('location')->label('Location')->placeholder('—'),
-                        TextEntry::make('targeting')->label('Targeting')->placeholder('—')->columnSpan(2),
+            // ── Ghi chú & File đính kèm ──────────────────────────────────────
+            Section::make()->schema([
+                TextEntry::make('note')
+                    ->label('Ghi chú')
+                    ->placeholder('—')
+                    ->columnSpanFull(),
 
-                        TextEntry::make('start_date')->label('Start')->date('d/m/Y')->placeholder('—'),
-                        TextEntry::make('end_date')->label('End')->date('d/m/Y')->placeholder('—'),
-                        TextEntry::make('live_days')->label('Live Days')->placeholder('—')->suffix(' ngày'),
-
-                        TextEntry::make('unit')
-                            ->label('Unit')
-                            ->badge()
-                            ->formatStateUsing(fn ($state) => \App\Models\BriefLineItem::$units[$state] ?? $state)
-                            ->color(fn ($state) => match ($state) {
-                                'cpm' => 'info',
-                                'cpd' => 'warning',
-                                'io'  => 'success',
-                                default => 'gray',
-                            }),
-                        TextEntry::make('guaranteed_units')
-                            ->label('Guaranteed Units')
-                            ->numeric()
-                            ->placeholder('—'),
-                        TextEntry::make('unit_cost')->label('Unit Cost')->numeric()->placeholder('—'),
-                        TextEntry::make('daily_spots')->label('Daily Spots/Screen')->placeholder('—'),
-                        TextEntry::make('line_budget')
-                            ->label('Line Budget')
-                            ->formatStateUsing(fn ($state, $record) => $state
-                                ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->brief?->currency ?? 'VND')
-                                : '—')
-                            ->weight('bold'),
-
-                        TextEntry::make('est_impression')->label('Est Impression')->numeric()->placeholder('—'),
-                        TextEntry::make('avg_multiplier')->label('Avg Multiplier')->placeholder('—'),
-                        TextEntry::make('est_impression_day')->label('Est Imp/Day')->numeric()->placeholder('—'),
-                        TextEntry::make('est_ad_spot')->label('Est Ad Spot')->numeric()->placeholder('—'),
-                    ])
-                    ->columns(6),
-            ]),
+                InfolistActions::make([
+                    InfolistAction::make('download_file')
+                        ->label(fn ($record) => $record->file_path ? basename($record->file_path) : 'Không có file')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('gray')
+                        ->url(fn ($record) => $record->file_path ? Storage::url($record->file_path) : null)
+                        ->openUrlInNewTab()
+                        ->visible(fn ($record) => (bool) $record->file_path),
+                ])->label('File đính kèm'),
+            ])->visible(fn ($record) => $record->note || $record->file_path),
         ]);
     }
 }
