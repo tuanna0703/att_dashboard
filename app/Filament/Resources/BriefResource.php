@@ -154,17 +154,20 @@ class BriefResource extends Resource
                             Forms\Components\TextInput::make('est_impression')
                                 ->label('Est Impression')
                                 ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->live(onBlur: true),
+                                ->live(onBlur: true)
+                                ->dehydrateStateUsing(fn ($state) => $state ? (int) preg_replace('/\D/', '', $state) : null),
 
                             Forms\Components\TextInput::make('est_impression_day')
                                 ->label('Est Impression/Day')
                                 ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->live(onBlur: true),
+                                ->live(onBlur: true)
+                                ->dehydrateStateUsing(fn ($state) => $state ? (int) preg_replace('/\D/', '', $state) : null),
 
                             Forms\Components\TextInput::make('est_ad_spot')
                                 ->label('Est Ad Spot')
                                 ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->live(onBlur: true),
+                                ->live(onBlur: true)
+                                ->dehydrateStateUsing(fn ($state) => $state ? (int) preg_replace('/\D/', '', $state) : null),
                         ])->columns(1)->columnSpan(1),
                     ])
                     ->columns(2)
