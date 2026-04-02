@@ -82,7 +82,7 @@ class BriefResource extends Resource
                             ->label('Format')
                             ->options(['6s' => '6s', '15s' => '15s', '30s' => '30s'])
                             ->placeholder('Chọn format…')
-                            ->columnSpan(4),
+                            ->columnSpan(2),
 
                         Forms\Components\Select::make('targeting')
                             ->label('Network')
@@ -93,7 +93,7 @@ class BriefResource extends Resource
                             )
                             ->searchable()
                             ->placeholder('Tìm và chọn network…')
-                            ->columnSpanFull(),
+                            ->columnSpan(6),
 
                         // ── Dates ─────────────────────────────────────────
                         Forms\Components\DatePicker::make('start_date')
