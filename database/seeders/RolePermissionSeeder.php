@@ -51,6 +51,8 @@ class RolePermissionSeeder extends Seeder
         // Media Buying Order
         'media_buying_orders.viewAny', 'media_buying_orders.view',
         'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
+        // Màn hình (Screens)
+        'screens.viewAny', 'screens.create', 'screens.update', 'screens.delete',
     ];
 
     public function run(): void
@@ -88,6 +90,7 @@ class RolePermissionSeeder extends Seeder
             'reports.viewDepartment',
             // Booking module
             'ad_networks.viewAny',
+            'screens.viewAny',
             'briefs.viewAny', 'briefs.view',
             'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view',
@@ -111,6 +114,7 @@ class RolePermissionSeeder extends Seeder
             'reports.viewDepartment',
             // Booking module
             'ad_networks.viewAny',
+            'screens.viewAny',
             'briefs.viewAny', 'briefs.view',
             'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view',
@@ -141,6 +145,7 @@ class RolePermissionSeeder extends Seeder
             'customer_contacts.viewAny', 'customer_contacts.create', 'customer_contacts.update',
             'contracts.viewAny', 'contracts.view', 'contracts.create', 'contracts.update',
             'ad_networks.viewAny',
+            'screens.viewAny',
             'briefs.viewAny', 'briefs.view', 'briefs.create', 'briefs.update', 'briefs.delete',
             'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view', 'bookings.update',
@@ -153,6 +158,7 @@ class RolePermissionSeeder extends Seeder
             'customers.viewAny', 'customers.view',
             'contracts.viewAny', 'contracts.view',
             'ad_networks.viewAny',
+            'screens.viewAny', 'screens.create', 'screens.update', 'screens.delete',
             'briefs.viewAny', 'briefs.view', 'briefs.update',
             'plans.viewAny', 'plans.view', 'plans.create', 'plans.update', 'plans.delete',
             'bookings.viewAny', 'bookings.view',
