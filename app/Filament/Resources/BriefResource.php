@@ -254,7 +254,7 @@ class BriefResource extends Resource
 
         // line_budget
         $budget = match ($unit) {
-            'cpm'   => ($guaranteed / 1000) * $unitCost,          // impressions/1000 × CPM rate
+            'cpm'   => $guaranteed * $unitCost,                    // units × unit cost
             'cpd'   => $guaranteed * $unitCost * $liveDays,        // screens × rate/screen/day × days
             'io'    => $guaranteed * $liveDays * $unitCost,        // spots/day × days × rate/spot
             default => 0,
