@@ -4,9 +4,6 @@ namespace App\Filament\Resources\BriefResource\RelationManagers;
 
 use App\Models\AdNetwork;
 use App\Models\BriefLineItem;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
@@ -20,37 +17,6 @@ class BriefLineItemsRelationManager extends RelationManager
     public function isReadOnly(): bool
     {
         return true;
-    }
-
-    // ─── Infolist for KPI modal (used by ViewAction) ──────────────────────────
-
-    public function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist->schema([
-            Section::make()->schema([
-                TextEntry::make('targeting')
-                    ->label('Network')
-                    ->getStateUsing(function ($record) {
-                        $ids = $record->targeting ?? [];
-                        if (empty($ids)) return '—';
-                        return AdNetwork::whereIn('id', (array) $ids)->orderBy('name')->pluck('name')->implode(', ');
-                    }),
-
-                TextEntry::make('format')->label('Format')->placeholder('—'),
-
-                TextEntry::make('est_impression')
-                    ->label('Est Impression')
-                    ->formatStateUsing(fn ($state) => $state ? number_format((int) $state, 0, ',', '.') : '—'),
-
-                TextEntry::make('est_impression_day')
-                    ->label('Est Impression/Day')
-                    ->formatStateUsing(fn ($state) => $state ? number_format((int) $state, 0, ',', '.') : '—'),
-
-                TextEntry::make('est_ad_spot')
-                    ->label('Est Ad Spot')
-                    ->formatStateUsing(fn ($state) => $state ? number_format((int) $state, 0, ',', '.') : '—'),
-            ])->columns(3),
-        ]);
     }
 
     // ─── Table ────────────────────────────────────────────────────────────────
@@ -116,12 +82,15 @@ class BriefLineItemsRelationManager extends RelationManager
                     ->alignEnd(),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make()
+                Tables\Actions\Action::make('view_kpi')
                     ->label('')
                     ->tooltip('Xem KPI')
                     ->icon('heroicon-o-chart-bar')
                     ->color('gray')
-                    ->modalHeading('Est KPI'),
+                    ->modalHeading('Est KPI')
+                    ->modalContent(fn ($record) => view('filament.modals.kpi-detail', compact('record')))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Đóng'),
             ]);
     }
 }
