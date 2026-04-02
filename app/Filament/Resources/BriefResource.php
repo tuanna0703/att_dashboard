@@ -294,15 +294,6 @@ class BriefResource extends Resource
                     ->label('AdOps')
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('start_date')
-                    ->label('Bắt đầu')
-                    ->date('d/m/Y')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('end_date')
-                    ->label('Kết thúc')
-                    ->date('d/m/Y'),
-
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Ngân sách')
                     ->formatStateUsing(fn ($state, $record) => $state
@@ -405,6 +396,7 @@ class BriefResource extends Resource
                             $finalRevision = $record->revisions()->where('is_final', true)->first();
                             $source        = $acceptedPlan ?? $record;
 
+                            $lineItems  = $record->briefLineItems;
                             $booking = \App\Models\Booking::create([
                                 'brief_id'          => $record->id,
                                 'brief_revision_id' => $finalRevision?->id,
@@ -413,8 +405,8 @@ class BriefResource extends Resource
                                 'sale_id'           => $record->sale_id,
                                 'adops_id'          => $record->adops_id,
                                 'campaign_name'     => $source->campaign_name,
-                                'start_date'        => $source->start_date,
-                                'end_date'          => $source->end_date,
+                                'start_date'        => $lineItems->min('start_date'),
+                                'end_date'          => $lineItems->max('end_date'),
                                 'total_budget'      => $source->budget,
                                 'status'            => 'pending_contract',
                             ]);

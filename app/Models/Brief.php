@@ -19,13 +19,8 @@ class Brief extends Model
         'sale_id',
         'adops_id',
         'campaign_name',
-        'objective',
-        'target_audience',
         'budget',
         'currency',
-        'start_date',
-        'end_date',
-        'screen_count',
         'status',
         'current_revision_id',
         'note',
@@ -33,9 +28,7 @@ class Brief extends Model
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date'   => 'date',
-        'budget'     => 'decimal:2',
+        'budget' => 'decimal:2',
     ];
 
     public static array $statuses = [

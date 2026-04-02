@@ -9,10 +9,7 @@ class BriefLineItem extends Model
 {
     protected $fillable = [
         'brief_id',
-        'platform',
-        'placement',
         'format',
-        'location',
         'targeting',
         'start_date',
         'end_date',
@@ -23,7 +20,6 @@ class BriefLineItem extends Model
         'daily_spots',
         'line_budget',
         'est_impression',
-        'avg_multiplier',
         'est_impression_day',
         'est_ad_spot',
         'sort_order',
