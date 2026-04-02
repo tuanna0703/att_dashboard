@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BriefResource\Pages;
 use App\Filament\Resources\BriefResource\RelationManagers;
 use App\Models\Brief;
+use App\Models\AdNetwork;
 use App\Models\BriefLineItem;
 use App\Models\Customer;
 use App\Models\User;
@@ -97,10 +98,16 @@ class BriefResource extends Resource
                             ->placeholder('Vietnam, HCM…')
                             ->columnSpan(2),
 
-                        Forms\Components\Textarea::make('targeting')
-                            ->label('Targeting')
-                            ->placeholder('Shopping Malls: AEON MALL…')
-                            ->rows(1)
+                        Forms\Components\Select::make('targeting')
+                            ->label('Targeting (Networks)')
+                            ->options(
+                                AdNetwork::where('is_active', true)
+                                    ->orderBy('name')
+                                    ->pluck('name', 'id')
+                            )
+                            ->multiple()
+                            ->searchable()
+                            ->placeholder('Tìm và chọn network…')
                             ->columnSpanFull(),
 
                         // ── Dates ─────────────────────────────────────────
