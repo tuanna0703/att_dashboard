@@ -20,6 +20,12 @@
                 <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                     AdOps
                 </th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Ghi chú
+                </th>
+                <th class="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    File đính kèm
+                </th>
             </tr>
         </thead>
         <tbody>
@@ -32,10 +38,8 @@
                 </td>
                 <td class="px-4 py-3">
                     @php
-                        $statusLabels = \App\Models\Brief::$statuses;
-                        $statusColors = \App\Models\Brief::$statusColors;
-                        $color = $statusColors[$record->status] ?? 'gray';
-                        $label = $statusLabels[$record->status] ?? $record->status;
+                        $color = \App\Models\Brief::$statusColors[$record->status] ?? 'gray';
+                        $label = \App\Models\Brief::$statuses[$record->status] ?? $record->status;
                     @endphp
                     <x-filament::badge :color="$color">{{ $label }}</x-filament::badge>
                 </td>
@@ -50,6 +54,21 @@
                 </td>
                 <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
                     {{ $record->adops?->name ?? 'Chưa assign' }}
+                </td>
+                <td class="px-4 py-3 text-gray-500 dark:text-gray-400 whitespace-pre-line">
+                    {{ $record->note ?: '—' }}
+                </td>
+                <td class="px-4 py-3">
+                    @if ($record->file_path)
+                        <a href="{{ \Illuminate\Support\Facades\Storage::url($record->file_path) }}"
+                           target="_blank"
+                           class="inline-flex items-center gap-1.5 text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-primary-400 transition">
+                            <x-heroicon-o-arrow-down-tray class="w-4 h-4 shrink-0" />
+                            <span class="truncate max-w-[160px]">{{ basename($record->file_path) }}</span>
+                        </a>
+                    @else
+                        <span class="text-gray-400">—</span>
+                    @endif
                 </td>
             </tr>
         </tbody>

@@ -109,10 +109,6 @@ class ViewBrief extends ViewRecord
         return $infolist->schema([
             InfolisView::make('filament.infolists.brief-campaign-info')
                 ->viewData(['record' => $this->record]),
-
-            InfolisView::make('filament.infolists.brief-note-file')
-                ->viewData(['record' => $this->record])
-                ->visible(fn ($record) => $record->note || $record->file_path),
         ]);
     }
 }
