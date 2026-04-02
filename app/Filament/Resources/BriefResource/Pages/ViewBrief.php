@@ -4,14 +4,19 @@ namespace App\Filament\Resources\BriefResource\Pages;
 
 use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\BriefResource\RelationManagers\BriefLineItemsRelationManager;
+use App\Models\Brief;
 use App\Models\User;
 use Filament\Actions;
 use Filament\Forms;
-use Filament\Infolists\Components\View as InfolisView;
+use Filament\Infolists\Components\Actions as InfolistActions;
+use Filament\Infolists\Components\Actions\Action as InfolistAction;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Support\Facades\Storage;
 
 class ViewBrief extends ViewRecord
 {
@@ -107,8 +112,53 @@ class ViewBrief extends ViewRecord
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
-            InfolisView::make('filament.infolists.brief-campaign-info')
-                ->viewData(['record' => $this->record]),
+            Section::make()->schema([
+                TextEntry::make('campaign_name')
+                    ->label('Tên Campaign')
+                    ->weight('bold')
+                    ->size(TextEntry\TextEntrySize::Large)
+                    ->hint(fn ($record) => $record->brief_no),
+
+                TextEntry::make('status')
+                    ->label('Trạng thái')
+                    ->badge()
+                    ->formatStateUsing(fn ($state) => Brief::$statuses[$state] ?? $state)
+                    ->color(fn ($state) => Brief::$statusColors[$state] ?? 'gray'),
+
+                TextEntry::make('customer.name')
+                    ->label('Khách hàng'),
+
+                TextEntry::make('budget')
+                    ->label('Ngân sách')
+                    ->weight('bold')
+                    ->formatStateUsing(fn ($state, $record) => $state
+                        ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->currency ?? 'VND')
+                        : '—'),
+
+                TextEntry::make('sale.name')
+                    ->label('Sale'),
+
+                TextEntry::make('adops.name')
+                    ->label('AdOps')
+                    ->placeholder('Chưa assign'),
+
+                TextEntry::make('note')
+                    ->label('Ghi chú')
+                    ->placeholder('—')
+                    ->columnSpan(2),
+
+                InfolistActions::make([
+                    InfolistAction::make('download_file')
+                        ->label(fn ($record) => basename($record->file_path))
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('gray')
+                        ->url(fn ($record) => Storage::url($record->file_path))
+                        ->openUrlInNewTab()
+                        ->visible(fn ($record) => (bool) $record->file_path),
+                ])
+                    ->label('File đính kèm')
+                    ->visible(fn ($record) => (bool) $record->file_path),
+            ])->columns(4),
         ]);
     }
 }
