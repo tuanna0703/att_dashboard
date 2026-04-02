@@ -51,24 +51,26 @@ class BriefResource extends Resource
                     ->maxLength(200)
                     ->columnSpan(2),
 
-                Forms\Components\Select::make('customer_id')
-                    ->label('Khách hàng')
-                    ->options(Customer::orderBy('name')->pluck('name', 'id'))
-                    ->searchable()
-                    ->required(),
+                Forms\Components\Grid::make(3)->schema([
+                    Forms\Components\Select::make('customer_id')
+                        ->label('Khách hàng')
+                        ->options(Customer::orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->required(),
 
-                Forms\Components\Select::make('sale_id')
-                    ->label('Sale phụ trách')
-                    ->options(User::orderBy('name')->pluck('name', 'id'))
-                    ->searchable()
-                    ->required()
-                    ->default(auth()->id()),
+                    Forms\Components\Select::make('sale_id')
+                        ->label('Sale phụ trách')
+                        ->options(User::orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->required()
+                        ->default(auth()->id()),
 
-                Forms\Components\Select::make('adops_id')
-                    ->label('AdOps phụ trách')
-                    ->options(User::orderBy('name')->pluck('name', 'id'))
-                    ->searchable()
-                    ->placeholder('Chưa assign'),
+                    Forms\Components\Select::make('adops_id')
+                        ->label('AdOps phụ trách')
+                        ->options(User::orderBy('name')->pluck('name', 'id'))
+                        ->searchable()
+                        ->placeholder('Chưa assign'),
+                ])->columnSpanFull(),
 
                 Forms\Components\DatePicker::make('start_date')
                     ->label('Ngày bắt đầu')
@@ -83,15 +85,15 @@ class BriefResource extends Resource
             Forms\Components\Section::make('Chi tiết yêu cầu')->schema([
                 Forms\Components\TextInput::make('budget')
                     ->label('Tổng ngân sách')
-                    ->prefix(fn (Get $get) => $get('currency') === 'USD' ? '$' : '₫')
-                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                    ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
-                    ->afterStateHydrated(function ($component, $state) {
+                    ->disabled()
+                    ->dehydrated(false)
+                    ->afterStateHydrated(function ($component, $state, $record) {
                         if ($state !== null && $state !== '') {
-                            $component->state(number_format((float) $state, 0, ',', '.'));
+                            $currency = $record?->currency ?? 'VND';
+                            $component->state(number_format((float) $state, 0, ',', '.') . ' ' . $currency);
                         }
                     })
-                    ->helperText('Tổng ngân sách toàn brief (có thể tổng hợp từ line items)'),
+                    ->helperText('Tự động tính từ tổng line_budget của các line items'),
 
                 Forms\Components\Select::make('currency')
                     ->label('Tiền tệ')

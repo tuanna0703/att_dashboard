@@ -127,6 +127,12 @@ class Brief extends Model
         return $this->hasMany(BriefLineItem::class)->orderBy('sort_order');
     }
 
+    public function recalcBudget(): void
+    {
+        $total = $this->briefLineItems()->sum('line_budget');
+        $this->updateQuietly(['budget' => $total ?: null]);
+    }
+
     public function booking(): HasOne
     {
         return $this->hasOne(Booking::class);

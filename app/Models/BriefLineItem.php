@@ -42,6 +42,12 @@ class BriefLineItem extends Model
         'io'  => 'I/O (Spots/Day)',
     ];
 
+    protected static function booted(): void
+    {
+        static::saved(fn (self $item) => $item->brief?->recalcBudget());
+        static::deleted(fn (self $item) => $item->brief?->recalcBudget());
+    }
+
     public function brief(): BelongsTo
     {
         return $this->belongsTo(Brief::class);
