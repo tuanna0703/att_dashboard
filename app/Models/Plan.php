@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -93,5 +94,28 @@ class Plan extends Model
     public function booking(): HasOne
     {
         return $this->hasOne(Booking::class);
+    }
+
+    public function lineItems(): HasMany
+    {
+        return $this->hasMany(PlanLineItem::class)->orderBy('sort_order');
+    }
+
+    // ─── Computed totals ──────────────────────────────────────────────────────
+
+    public function recalculateTotals(): void
+    {
+        $totals = $this->lineItems()->selectRaw('
+            SUM(net_price) as total_net,
+            SUM(estimated_impressions) as total_impressions,
+            COUNT(*) as total_screens
+        ')->first();
+
+        $this->withoutEvents(function () use ($totals) {
+            $this->update([
+                'budget'       => $totals->total_net ?? $this->budget,
+                'screen_count' => $totals->total_screens ?? $this->screen_count,
+            ]);
+        });
     }
 }

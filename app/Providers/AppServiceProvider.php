@@ -3,8 +3,16 @@
 namespace App\Providers;
 
 use App\Models\AppSetting;
+use App\Models\Booking;
+use App\Models\BookingLineItem;
+use App\Models\CampaignTraffic;
+use App\Models\CreativeSubmission;
 use App\Models\ExpenseItem;
 use App\Models\ReceiptAllocation;
+use App\Observers\BookingLineItemObserver;
+use App\Observers\BookingObserver;
+use App\Observers\CampaignTrafficObserver;
+use App\Observers\CreativeSubmissionObserver;
 use App\Observers\ExpenseItemObserver;
 use App\Observers\ReceiptAllocationObserver;
 use Illuminate\Support\Facades\Schema;
@@ -21,6 +29,13 @@ class AppServiceProvider extends ServiceProvider
     {
         ReceiptAllocation::observe(ReceiptAllocationObserver::class);
         ExpenseItem::observe(ExpenseItemObserver::class);
+
+        // ── New module observers ──────────────────────────────────────────────
+        Booking::observe(BookingObserver::class);
+        BookingLineItem::observe(BookingLineItemObserver::class);
+        CreativeSubmission::observe(CreativeSubmissionObserver::class);
+        CampaignTraffic::observe(CampaignTrafficObserver::class);
+
         $this->applyMailgunSettings();
     }
 

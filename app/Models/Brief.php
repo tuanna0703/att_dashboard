@@ -19,6 +19,8 @@ class Brief extends Model
         'sale_id',
         'adops_id',
         'campaign_name',
+        'objective',
+        'target_audience',
         'budget',
         'start_date',
         'end_date',

@@ -37,3 +37,9 @@ Schedule::command('reports:send-subscriptions')
     ->everyMinute()
     ->name('send-report-subscriptions')
     ->withoutOverlapping();
+
+// Mỗi 15 phút — hết hạn soft inventory holds
+Schedule::command('inventory:expire-holds')
+    ->everyFifteenMinutes()
+    ->name('expire-inventory-holds')
+    ->withoutOverlapping();
