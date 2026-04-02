@@ -112,7 +112,7 @@ class ViewBrief extends ViewRecord
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
-            Section::make()->schema([
+            Section::make('Campaign Info')->schema([
                 TextEntry::make('campaign_name')
                     ->label('Tên Campaign')
                     ->weight('bold')
