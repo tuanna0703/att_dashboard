@@ -179,7 +179,7 @@ class ViewBrief extends ViewRecord
                             ->label('Download')
                             ->icon('heroicon-o-arrow-down-tray')
                             ->color('gray')
-                            ->url(fn ($record) => Storage::url($record->file_path))
+                            ->url(fn ($record) => Storage::disk('public')->url($record->file_path))
                             ->openUrlInNewTab()
                             ->visible(fn ($record) => (bool) $record->file_path),
                     ])

@@ -230,6 +230,7 @@ class BriefResource extends Resource
 
                 Forms\Components\FileUpload::make('file_path')
                     ->label('File đính kèm (brief gốc từ khách)')
+                    ->disk('public')
                     ->directory('briefs/attachments')
                     ->acceptedFileTypes([
                         'application/pdf',
