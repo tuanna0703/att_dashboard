@@ -179,8 +179,7 @@ class ViewBrief extends ViewRecord
                             ->label('Download')
                             ->icon('heroicon-o-arrow-down-tray')
                             ->color('gray')
-                            ->url(fn ($record) => Storage::disk('public')->url($record->file_path))
-                            ->openUrlInNewTab()
+                            ->action(fn ($record) => Storage::disk('public')->download($record->file_path))
                             ->visible(fn ($record) => (bool) $record->file_path),
                     ])
                         ->label('File đính kèm')
