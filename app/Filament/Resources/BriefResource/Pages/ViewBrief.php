@@ -109,6 +109,11 @@ class ViewBrief extends ViewRecord
         ];
     }
 
+    public function getTitle(): string
+    {
+        return $this->record->campaign_name;
+    }
+
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
