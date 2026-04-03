@@ -131,7 +131,10 @@ class ViewBrief extends ViewRecord
             // ── Tabs: General + Management ────────────────────────────────────
             Tabs::make()->tabs([
 
-                Tab::make('General')->schema([
+                Tab::make('General')
+                    ->badge(fn () => Brief::$statuses[$this->record->status] ?? $this->record->status)
+                    ->badgeColor(fn () => Brief::$statusColors[$this->record->status] ?? 'gray')
+                    ->schema([
                     TextEntry::make('campaign_name')
                         ->label('Tên Campaign'),
 
