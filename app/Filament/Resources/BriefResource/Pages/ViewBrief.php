@@ -111,19 +111,13 @@ class ViewBrief extends ViewRecord
 
     public function getTitle(): string
     {
-        return $this->record->campaign_name;
+        return $this->record->brief_no;
     }
 
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
             Section::make('Campaign Info')->schema([
-                TextEntry::make('campaign_name')
-                    ->label('Tên Campaign')
-                    ->weight('bold')
-                    ->size(TextEntry\TextEntrySize::Large)
-                    ->hint(fn ($record) => $record->brief_no),
-
                 TextEntry::make('status')
                     ->label('Trạng thái')
                     ->badge()
