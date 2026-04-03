@@ -34,7 +34,7 @@ class ViewBrief extends ViewRecord
 
     public function getTitle(): string
     {
-        return $this->record->brief_no;
+        return $this->record->campaign_name;
     }
 
     // ─── Header actions ───────────────────────────────────────────────────────
@@ -123,16 +123,6 @@ class ViewBrief extends ViewRecord
     public function infolist(Infolist $infolist): Infolist
     {
         return $infolist->schema([
-
-            // ── Hero: campaign name + customer + status ───────────────────────
-            InfolisView::make('filament.infolists.brief-hero')
-                ->viewData(['record' => $this->record])
-                ->columnSpanFull(),
-
-            // ── Stats: budget + timeline + duration ───────────────────────────
-            InfolisView::make('filament.infolists.brief-stats')
-                ->viewData(['record' => $this->record])
-                ->columnSpanFull(),
 
             // ── Tabs: General + Management ────────────────────────────────────
             Tabs::make()->tabs([
