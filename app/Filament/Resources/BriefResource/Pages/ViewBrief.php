@@ -10,8 +10,8 @@ use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists\Components\Actions as InfolistActions;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
-use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\Tabs;
+use Filament\Infolists\Components\Tabs\Tab;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\View as InfolisView;
 use Filament\Infolists\Infolist;
@@ -134,62 +134,66 @@ class ViewBrief extends ViewRecord
                 ->viewData(['record' => $this->record])
                 ->columnSpanFull(),
 
-            // ── Detail sections ───────────────────────────────────────────────
-            Grid::make(2)->schema([
-                Section::make('Thông tin brief')->schema([
+            // ── Tabs: General + Management ────────────────────────────────────
+            Tabs::make()->tabs([
+
+                Tab::make('General')->schema([
+                    TextEntry::make('campaign_name')
+                        ->label('Tên Campaign'),
+
                     TextEntry::make('brief_no')
                         ->label('Mã Brief'),
 
+                    TextEntry::make('budget')
+                        ->label('Budget')
+                        ->weight('bold')
+                        ->formatStateUsing(fn ($state, $record) => $state
+                            ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->currency ?? 'VND')
+                            : '—'),
+
+                    TextEntry::make('start_date')
+                        ->label('Ngày bắt đầu')
+                        ->getStateUsing(fn ($record) => $record->briefLineItems->min('start_date'))
+                        ->date('d/m/Y')
+                        ->placeholder('—'),
+
+                    TextEntry::make('end_date')
+                        ->label('Ngày kết thúc')
+                        ->getStateUsing(fn ($record) => $record->briefLineItems->max('end_date'))
+                        ->date('d/m/Y')
+                        ->placeholder('—'),
+
                     TextEntry::make('customer.name')
                         ->label('Khách hàng'),
+                ])->columns(3),
 
-                    TextEntry::make('status')
-                        ->label('Trạng thái')
-                        ->badge()
-                        ->formatStateUsing(fn ($state) => Brief::$statuses[$state] ?? $state)
-                        ->color(fn ($state) => Brief::$statusColors[$state] ?? 'gray'),
-
-                    TextEntry::make('currency')
-                        ->label('Loại tiền'),
-
-                    TextEntry::make('created_at')
-                        ->label('Ngày tạo')
-                        ->dateTime('d/m/Y H:i')
-                        ->columnSpan(2),
-                ])->columns(2),
-
-                Section::make('Người phụ trách')->schema([
+                Tab::make('Management')->schema([
                     TextEntry::make('sale.name')
                         ->label('Sale'),
 
                     TextEntry::make('adops.name')
                         ->label('AdOps')
                         ->placeholder('Chưa assign'),
+
+                    TextEntry::make('note')
+                        ->label('Ghi chú')
+                        ->placeholder('—')
+                        ->columnSpanFull(),
+
+                    InfolistActions::make([
+                        InfolistAction::make('download_file')
+                            ->label('Download')
+                            ->icon('heroicon-o-arrow-down-tray')
+                            ->color('gray')
+                            ->url(fn ($record) => Storage::url($record->file_path))
+                            ->openUrlInNewTab()
+                            ->visible(fn ($record) => (bool) $record->file_path),
+                    ])
+                        ->label('File đính kèm')
+                        ->columnSpanFull(),
                 ])->columns(2),
+
             ])->columnSpanFull(),
-
-            // ── Ghi chú ──────────────────────────────────────────────────────
-            Section::make('Ghi chú')->schema([
-                TextEntry::make('note')
-                    ->hiddenLabel()
-                    ->columnSpanFull(),
-            ])
-                ->visible(fn ($record) => (bool) $record->note)
-                ->columnSpanFull(),
-
-            // ── File đính kèm ─────────────────────────────────────────────────
-            Section::make('File đính kèm')->schema([
-                InfolistActions::make([
-                    InfolistAction::make('download_file')
-                        ->label(fn ($record) => basename($record->file_path))
-                        ->icon('heroicon-o-arrow-down-tray')
-                        ->color('gray')
-                        ->url(fn ($record) => Storage::url($record->file_path))
-                        ->openUrlInNewTab(),
-                ])->hiddenLabel(),
-            ])
-                ->visible(fn ($record) => (bool) $record->file_path)
-                ->columnSpanFull(),
         ]);
     }
 }
