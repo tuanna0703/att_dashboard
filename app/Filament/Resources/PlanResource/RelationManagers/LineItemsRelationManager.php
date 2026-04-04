@@ -183,12 +183,17 @@ class LineItemsRelationManager extends RelationManager
                 // ── Network / Format ─────────────────────────────────────────
                 Tables\Columns\TextColumn::make('format')
                     ->label('Network / Format')
-                    ->weight('bold')
-                    ->description(fn (PlanLineItem $record) =>
-                        AdNetwork::whereIn('id', $record->targeting ?? [])
-                            ->orderBy('name')->pluck('name')->implode(', ') ?: '—'
-                    )
-                    ->searchable(),
+                    ->html()
+                    ->getStateUsing(fn (PlanLineItem $record) => (function () use ($record) {
+                        $networks = AdNetwork::whereIn('id', $record->targeting ?? [])
+                            ->orderBy('name')->pluck('name')->implode(', ');
+                        $top = $networks
+                            ? '<div class="font-semibold text-gray-950 dark:text-white">' . e($networks) . '</div>'
+                            : '';
+                        $bottom = '<div class="text-sm text-gray-500 dark:text-gray-400">' . e($record->format) . '</div>';
+                        return $top . $bottom;
+                    })())
+                    ->searchable(false),
 
                 // ── Date range (stacked: từ ngày ↓ đến ngày) ─────────────────
                 Tables\Columns\TextColumn::make('start_date')
@@ -204,17 +209,13 @@ class LineItemsRelationManager extends RelationManager
                         . '</div>'
                     ),
 
-                // ── KPI ───────────────────────────────────────────────────────
+                // ── KPI + Đơn vị ─────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('guaranteed_units')
                     ->label('KPI')
-                    ->numeric(decimalPlaces: 0, thousandsSeparator: '.')
+                    ->formatStateUsing(fn ($state, PlanLineItem $record) =>
+                        number_format((float) $state, 0, ',', '.') . ' ' . strtoupper($record->unit)
+                    )
                     ->alignEnd(),
-
-                // ── Đơn vị ───────────────────────────────────────────────────
-                Tables\Columns\TextColumn::make('unit')
-                    ->label('Đơn vị')
-                    ->badge()
-                    ->color('gray'),
 
                 // ── Ngân sách ─────────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('line_budget')

@@ -74,10 +74,11 @@ class ActivityLogRelationManager extends RelationManager
                     ->sortable()
                     ->width('150px'),
 
-                Tables\Columns\BadgeColumn::make('event')
+                Tables\Columns\TextColumn::make('event')
                     ->label('Hành động')
+                    ->badge()
                     ->formatStateUsing(fn (string $state) => ActivityLog::$eventLabels[$state] ?? $state)
-                    ->colors(ActivityLog::$eventColors)
+                    ->color(fn (string $state) => ActivityLog::$eventColors[$state] ?? 'gray')
                     ->width('160px'),
 
                 Tables\Columns\TextColumn::make('causer_name')

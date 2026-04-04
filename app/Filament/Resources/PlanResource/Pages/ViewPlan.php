@@ -225,8 +225,6 @@ class ViewPlan extends ViewRecord
 
                 // ── Tab General ───────────────────────────────────────────────
                 Tab::make('General')
-                    ->badge(fn () => Plan::$statuses[$this->record->status] ?? $this->record->status)
-                    ->badgeColor(fn () => Plan::$statusColors[$this->record->status] ?? 'gray')
                     ->schema([
                         TextEntry::make('plan_no')
                             ->label('Mã Plan')
