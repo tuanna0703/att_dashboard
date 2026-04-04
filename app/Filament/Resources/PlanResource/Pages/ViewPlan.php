@@ -7,6 +7,7 @@ use App\Events\Plan\PlanRejected;
 use App\Events\Plan\PlanRePlanRequested;
 use App\Events\Plan\PlanSubmitted;
 use App\Filament\Resources\BriefResource;
+use App\Filament\Resources\BookingResource;
 use App\Filament\Resources\PlanResource;
 use App\Filament\Resources\PlanResource\RelationManagers\LineItemsRelationManager;
 use App\Models\Plan;
@@ -169,6 +170,24 @@ class ViewPlan extends ViewRecord
 
                         Notification::make()->title('Đã gửi yêu cầu điều chỉnh cho AdOps')->warning()->send();
                         $this->refreshFormData(['status', 'sale_comment', 'responded_by', 'responded_at']);
+                    }),
+
+                // ── Tạo Booking từ Plan được chấp nhận ────────────────────────
+                Actions\Action::make('create_booking')
+                    ->label('Tạo Booking')
+                    ->icon('heroicon-o-document-plus')
+                    ->color('success')
+                    ->visible(fn () =>
+                        $this->record->status === 'accepted'
+                        && $this->record->booking()->doesntExist()
+                        && auth()->user()->hasAnyRole(['sale', 'ceo', 'coo'])
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Tạo Booking từ Plan này?')
+                    ->modalDescription('Toàn bộ line items của Plan sẽ được sao chép vào Booking. Dữ liệu sẽ là bản final để media buying và finance kiểm soát.')
+                    ->action(function () {
+                        PlanResource::createBookingFromPlan($this->record);
+                        $this->refreshFormData(['status']);
                     }),
 
                 // ── Sale: Từ chối plan ─────────────────────────────────────────

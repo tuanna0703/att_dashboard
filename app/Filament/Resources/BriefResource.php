@@ -399,41 +399,6 @@ class BriefResource extends Resource
                             }
                         }),
 
-                    // Convert sang Booking (khi đã confirmed)
-                    Tables\Actions\Action::make('convert_to_booking')
-                        ->label('Tạo Booking')
-                        ->icon('heroicon-o-arrow-top-right-on-square')
-                        ->color('primary')
-                        ->visible(fn (Brief $record) => $record->status === 'confirmed')
-                        ->requiresConfirmation()
-                        ->modalHeading('Chuyển Brief thành Booking?')
-                        ->modalDescription('Revision cuối cùng (is_final) sẽ được áp dụng cho Booking.')
-                        ->action(function (Brief $record) {
-                            $acceptedPlan  = $record->plans()->where('status', 'accepted')->latest()->first();
-                            $finalRevision = $record->revisions()->where('is_final', true)->first();
-                            $source        = $acceptedPlan ?? $record;
-
-                            $lineItems  = $record->briefLineItems;
-                            $booking = \App\Models\Booking::create([
-                                'brief_id'          => $record->id,
-                                'brief_revision_id' => $finalRevision?->id,
-                                'plan_id'           => $acceptedPlan?->id,
-                                'customer_id'       => $record->customer_id,
-                                'sale_id'           => $record->sale_id,
-                                'adops_id'          => $record->adops_id,
-                                'campaign_name'     => $source->campaign_name,
-                                'start_date'        => $lineItems->min('start_date'),
-                                'end_date'          => $lineItems->max('end_date'),
-                                'total_budget'      => $source->budget,
-                                'status'            => 'pending_contract',
-                            ]);
-                            $record->update(['status' => 'converted']);
-                            Notification::make()
-                                ->title("Đã tạo Booking {$booking->booking_no}")
-                                ->success()
-                                ->send();
-                        }),
-
                     Tables\Actions\DeleteAction::make()
                         ->visible(fn (Brief $record) => $record->status === 'draft'),
                 ]),

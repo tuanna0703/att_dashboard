@@ -6,9 +6,13 @@ use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\PlanResource\Pages;
 use App\Filament\Resources\PlanResource\RelationManagers;
 use App\Filament\Resources\Shared\ActivityLogRelationManager;
+use App\Models\AdNetwork;
+use App\Models\Booking;
+use App\Models\BookingLineItem;
 use App\Models\Plan;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -177,9 +181,85 @@ class PlanResource extends Resource
                         ->visible(fn (Plan $record) => in_array($record->status, ['draft', 're_plan'])
                             && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         ),
+
+                    // ── Tạo Booking từ Plan được chấp nhận ────────────────────
+                    Tables\Actions\Action::make('create_booking')
+                        ->label('Tạo Booking')
+                        ->icon('heroicon-o-document-plus')
+                        ->color('success')
+                        ->visible(fn (Plan $record) =>
+                            $record->status === 'accepted'
+                            && $record->booking()->doesntExist()
+                            && auth()->user()->hasAnyRole(['sale', 'ceo', 'coo'])
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading('Tạo Booking từ Plan này?')
+                        ->modalDescription('Toàn bộ line items của Plan sẽ được sao chép vào Booking. Dữ liệu sẽ là bản final để media buying và finance kiểm soát.')
+                        ->action(fn (Plan $record) => static::createBookingFromPlan($record)),
                 ]),
             ]);
         // Note: no ->defaultSort() — ordering is handled in ListPlans::getTableQuery()
+    }
+
+    // ─── Booking creation logic ───────────────────────────────────────────────
+
+    public static function createBookingFromPlan(Plan $plan): void
+    {
+        $brief    = $plan->brief;
+        $currency = $brief?->currency ?? 'VND';
+
+        $lineItems = $plan->lineItems()->orderBy('sort_order')->get();
+
+        $booking = Booking::create([
+            'brief_id'      => $plan->brief_id,
+            'plan_id'       => $plan->id,
+            'customer_id'   => $brief?->customer_id,
+            'sale_id'       => $brief?->sale_id,
+            'adops_id'      => $plan->adops_id,
+            'campaign_name' => $brief?->campaign_name,
+            'currency'      => $currency,
+            'start_date'    => $lineItems->min('start_date'),
+            'end_date'      => $lineItems->max('end_date'),
+            'total_budget'  => $plan->budget,
+            'status'        => 'pending_contract',
+        ]);
+
+        // Snapshot tất cả line items vào BookingLineItem
+        foreach ($lineItems as $index => $item) {
+            $networkIds    = $item->targeting ?? [];
+            $networkNames  = AdNetwork::whereIn('id', $networkIds)->orderBy('name')->pluck('name')->toArray();
+
+            BookingLineItem::create([
+                'booking_id'        => $booking->id,
+                'plan_line_item_id' => $item->id,
+                'format'            => $item->format,
+                'targeting'         => $networkIds,
+                'targeting_names'   => $networkNames,
+                'start_date'        => $item->start_date,
+                'end_date'          => $item->end_date,
+                'live_days'         => $item->live_days,
+                'unit'              => $item->unit,
+                'guaranteed_units'  => $item->guaranteed_units,
+                'unit_cost'         => $item->unit_cost,
+                'daily_spots'       => $item->daily_spots,
+                'line_budget'       => $item->line_budget,
+                'est_impression'    => $item->est_impression,
+                'est_impression_day'=> $item->est_impression_day,
+                'est_ad_spot'       => $item->est_ad_spot,
+                'buying_status'     => 'pending',
+                'notes'             => $item->notes,
+                'sort_order'        => $item->sort_order ?? $index,
+            ]);
+        }
+
+        // Cập nhật Brief sang trạng thái "Đã tạo Booking"
+        $brief?->update(['status' => 'converted']);
+
+        Notification::make()
+            ->title("Đã tạo Booking {$booking->booking_no}")
+            ->body("{$lineItems->count()} line items đã được sao chép.")
+            ->success()
+            ->send();
     }
 
     public static function getRelationManagers(): array

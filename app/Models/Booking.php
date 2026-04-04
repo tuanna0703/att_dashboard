@@ -16,13 +16,13 @@ class Booking extends Model
     protected $fillable = [
         'booking_no',
         'brief_id',
-        'brief_revision_id',
         'plan_id',
         'contract_id',
         'customer_id',
         'sale_id',
         'adops_id',
         'campaign_name',
+        'currency',
         'start_date',
         'end_date',
         'total_budget',
@@ -82,11 +82,6 @@ class Booking extends Model
         return $this->belongsTo(Brief::class);
     }
 
-    public function finalRevision(): BelongsTo
-    {
-        return $this->belongsTo(BriefRevision::class, 'brief_revision_id');
-    }
-
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
@@ -142,8 +137,10 @@ class Booking extends Model
     /** Recalculate totals from line items */
     public function recalculateBudget(): void
     {
-        $netTotal = $this->lineItems()->sum('net_price');
-        $taxAmt   = $netTotal * ($this->tax_pct / 100);
+        $netTotal = $this->lineItems()
+            ->whereNotIn('buying_status', ['cancelled'])
+            ->sum('line_budget');
+        $taxAmt = $netTotal * (($this->tax_pct ?? 0) / 100);
 
         $this->withoutEvents(function () use ($netTotal, $taxAmt) {
             $this->update([
