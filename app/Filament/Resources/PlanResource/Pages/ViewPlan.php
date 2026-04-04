@@ -103,7 +103,7 @@ class ViewPlan extends ViewRecord
                     )
                     ->requiresConfirmation()
                     ->modalHeading('Xác nhận chấp nhận Plan này?')
-                    ->modalDescription('Brief sẽ chuyển sang trạng thái "Confirmed" và có thể tạo Booking.')
+                    ->modalDescription('Brief sẽ chuyển sang trạng thái "Khách xác nhận" và có thể tạo Booking.')
                     ->action(function () {
                         $this->record->update([
                             'status'       => 'accepted',
@@ -127,7 +127,7 @@ class ViewPlan extends ViewRecord
                             ]
                         ));
 
-                        Notification::make()->title('Plan được chấp nhận — Brief đã confirmed')->success()->send();
+                        Notification::make()->title('Plan được chấp nhận — Brief đã xác nhận')->success()->send();
                         $this->refreshFormData(['status', 'responded_by', 'responded_at']);
                     }),
 

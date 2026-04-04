@@ -36,8 +36,8 @@ class Plan extends Model
     public static array $statuses = [
         'draft'     => 'Nháp',
         'submitted' => 'Chờ duyệt',
-        'accepted'  => 'Được chấp nhận',
-        're_plan'   => 'Cần điều chỉnh',
+        'accepted'  => 'Chấp nhận',
+        're_plan'   => 'Yêu cầu điều chỉnh',
         'rejected'  => 'Từ chối',
     ];
 

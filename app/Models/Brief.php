@@ -38,7 +38,7 @@ class Brief extends Model
         'planning_ready'    => 'Có planning',
         'sent_to_customer'  => 'Đã gửi khách',
         'customer_feedback' => 'Khách phản hồi',
-        'confirmed'         => 'Khách confirm',
+        'confirmed'         => 'Khách xác nhận',
         'rejected'          => 'Từ chối',
         'converted'         => 'Đã tạo Booking',
     ];
