@@ -2,234 +2,139 @@
 
 namespace App\Filament\Resources\PlanResource\RelationManagers;
 
-use App\Models\Plan;
-use App\Models\Screen;
+use App\Models\BriefLineItem;
+use App\Models\PlanLineItem;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 
 class LineItemsRelationManager extends RelationManager
 {
     protected static string $relationship = 'lineItems';
-    protected static ?string $title       = 'Line Items — Chi tiết màn hình';
+    protected static ?string $title       = 'Line Items';
 
     public function isReadOnly(): bool
     {
-        /** @var \App\Models\Plan $plan */
-        $plan = $this->getOwnerRecord();
+        return false;
+    }
 
-        // Only AdOps (and admin roles) can edit line items; editable only when plan is draft
-        if (! auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])) {
-            return true;
-        }
-
-        return ! in_array($plan->status, ['draft', 're_plan']);
+    public function canCreate(): bool
+    {
+        return auth()->user()->hasAnyRole(['sale', 'adops', 'ceo', 'coo']);
     }
 
     public function form(Form $form): Form
     {
+        /** @var \App\Models\Plan $plan */
+        $plan = $this->getOwnerRecord();
+
         return $form->schema([
-            // ── 1. Màn hình ────────────────────────────────────────────────────
-            Forms\Components\Section::make('Màn hình')->schema([
-                Forms\Components\Select::make('screen_id')
-                    ->label('Chọn màn hình')
+            Forms\Components\Section::make('Thông tin line item')->schema([
+                Forms\Components\Select::make('brief_line_item_id')
+                    ->label('Liên kết Brief line item')
                     ->options(
-                        Screen::active()
-                            ->orderBy('code')
+                        BriefLineItem::where('brief_id', $plan->brief_id)
                             ->get()
-                            ->mapWithKeys(fn (Screen $s) => [
-                                $s->id => "[{$s->code}] {$s->name}" . ($s->location_city ? " — {$s->location_city}" : ''),
+                            ->mapWithKeys(fn (BriefLineItem $item) => [
+                                $item->id => "[{$item->format}] {$item->start_date?->format('d/m/Y')} → {$item->end_date?->format('d/m/Y')}",
                             ])
                     )
                     ->searchable()
                     ->nullable()
-                    ->live()
-                    ->afterStateUpdated(function (?int $state, Set $set) {
-                        if (! $state) {
-                            return;
-                        }
-                        $screen = Screen::find($state);
-                        if (! $screen) {
-                            return;
-                        }
-                        $set('screen_code',    $screen->code);
-                        $set('venue_name',     $screen->venue_name);
-                        $set('venue_type',     $screen->venue_type);
-                        $set('location_city',  $screen->location_city);
-                        $set('spot_duration',  $screen->slot_duration_seconds);
-                        $set('spots_per_hour', $screen->total_slots_per_hour);
-                        $set('daily_hours',    $screen->operational_hours);
-                        if ($screen->rate_card_daily) {
-                            $set('pricing_model',    'fixed');
-                            $set('rate_card_price',  $screen->rate_card_daily);
-                        } elseif ($screen->rate_card_cpm) {
-                            $set('pricing_model', 'cpm');
-                            $set('cpm',           $screen->rate_card_cpm);
-                        }
-                    })
+                    ->placeholder('— Không liên kết (item mới của AdOps) —')
                     ->columnSpanFull(),
 
-                Forms\Components\TextInput::make('screen_code')
-                    ->label('Mã màn hình')
-                    ->maxLength(50),
+                Forms\Components\TextInput::make('format')
+                    ->label('Format')
+                    ->maxLength(100)
+                    ->placeholder('VD: Billboard, Lightbox, Video...')
+                    ->required(),
 
-                Forms\Components\TextInput::make('venue_name')
-                    ->label('Tên địa điểm')
-                    ->maxLength(200),
+                Forms\Components\TagsInput::make('targeting')
+                    ->label('Targeting')
+                    ->placeholder('Thêm target...')
+                    ->nullable(),
 
-                Forms\Components\Select::make('venue_type')
-                    ->label('Loại địa điểm')
-                    ->options(Screen::$venueTypes),
-
-                Forms\Components\TextInput::make('location_city')
-                    ->label('Thành phố')
-                    ->maxLength(100),
-
-            ])->columns(2),
-
-            // ── 2. Lịch chạy ───────────────────────────────────────────────────
-            Forms\Components\Section::make('Lịch chạy')->schema([
                 Forms\Components\DatePicker::make('start_date')
                     ->label('Ngày bắt đầu')
                     ->displayFormat('d/m/Y')
-                    ->required()
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcSpots($get, $set)),
+                    ->required(),
 
                 Forms\Components\DatePicker::make('end_date')
                     ->label('Ngày kết thúc')
                     ->displayFormat('d/m/Y')
-                    ->required()
                     ->after('start_date')
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcSpots($get, $set)),
+                    ->required(),
+            ])->columns(2),
 
-                Forms\Components\TextInput::make('spot_duration')
-                    ->label('Thời lượng slot')
-                    ->numeric()
-                    ->default(15)
-                    ->suffix('giây'),
-
-                Forms\Components\TextInput::make('spots_per_hour')
-                    ->label('Spots / giờ')
-                    ->numeric()
-                    ->required()
-                    ->default(4)
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcSpots($get, $set)),
-
-                Forms\Components\TextInput::make('daily_hours')
-                    ->label('Giờ phát / ngày')
-                    ->numeric()
-                    ->required()
-                    ->default(18)
-                    ->suffix('giờ')
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcSpots($get, $set)),
-
-                Forms\Components\TextInput::make('total_spots')
-                    ->label('Tổng spots')
-                    ->numeric()
-                    ->disabled()
-                    ->dehydrated(false)
-                    ->helperText('Tự động tính: spots/giờ × giờ/ngày × số ngày'),
-
-            ])->columns(3),
-
-            // ── 3. Giá ─────────────────────────────────────────────────────────
-            Forms\Components\Section::make('Giá & CPM')->schema([
-                Forms\Components\Select::make('pricing_model')
-                    ->label('Mô hình giá')
-                    ->options(['fixed' => 'Fixed (daily)', 'cpm' => 'CPM'])
-                    ->default('fixed')
+            Forms\Components\Section::make('KPI & Chi phí')->schema([
+                Forms\Components\Select::make('unit')
+                    ->label('Đơn vị tính')
+                    ->options(BriefLineItem::$units)
                     ->required(),
 
-                Forms\Components\TextInput::make('rate_card_price')
-                    ->label('Giá niêm yết')
-                    ->prefix('₫')
-                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                    ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
-                    ->afterStateHydrated(function ($component, $state) {
-                        if ($state !== null && $state !== '') {
-                            $component->state(number_format((float) $state, 0, ',', '.'));
-                        }
-                    })
-                    ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcPrice($get, $set)),
-
-                Forms\Components\TextInput::make('discount_pct')
-                    ->label('Chiết khấu (%)')
+                Forms\Components\TextInput::make('guaranteed_units')
+                    ->label('KPI (Số lượng)')
                     ->numeric()
-                    ->default(0)
-                    ->suffix('%')
-                    ->minValue(0)
-                    ->maxValue(100)
+                    ->required()
                     ->live(onBlur: true)
-                    ->afterStateUpdated(fn (Get $get, Set $set) => self::recalcPrice($get, $set)),
+                    ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) =>
+                        self::recalcBudget($get, $set)
+                    ),
 
-                Forms\Components\TextInput::make('net_price')
-                    ->label('Giá net')
+                Forms\Components\TextInput::make('unit_cost')
+                    ->label('Đơn giá')
+                    ->numeric()
+                    ->prefix('₫')
+                    ->required()
+                    ->live(onBlur: true)
+                    ->afterStateUpdated(fn ($state, Forms\Set $set, Forms\Get $get) =>
+                        self::recalcBudget($get, $set)
+                    ),
+
+                Forms\Components\TextInput::make('line_budget')
+                    ->label('Tổng ngân sách')
+                    ->numeric()
                     ->prefix('₫')
                     ->disabled()
                     ->dehydrated(false)
-                    ->helperText('Tự động: giá niêm yết × (1 − chiết khấu)'),
+                    ->helperText('Tự động: KPI × Đơn giá'),
 
-                Forms\Components\TextInput::make('cpm')
-                    ->label('CPM')
-                    ->prefix('₫')
-                    ->numeric()
-                    ->nullable(),
-
-                Forms\Components\TextInput::make('estimated_impressions')
+                Forms\Components\TextInput::make('est_impression')
                     ->label('Est. Impressions')
                     ->numeric()
                     ->nullable(),
-
             ])->columns(3),
 
-            // ── 4. Ghi chú ─────────────────────────────────────────────────────
             Forms\Components\Section::make()->schema([
-                Forms\Components\TextInput::make('sort_order')
-                    ->label('Thứ tự')
-                    ->numeric()
-                    ->default(0),
-
                 Forms\Components\Textarea::make('notes')
                     ->label('Ghi chú')
                     ->rows(2)
-                    ->columnSpan(2),
-            ])->columns(3),
+                    ->columnSpanFull(),
+            ]),
         ]);
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->recordTitleAttribute('screen_code')
+            ->recordTitleAttribute('format')
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([
-                Tables\Columns\TextColumn::make('screen_code')
-                    ->label('Màn hình')
+                Tables\Columns\BadgeColumn::make('source')
+                    ->label('Nguồn')
+                    ->formatStateUsing(fn ($state) => PlanLineItem::$sourceLabels[$state] ?? $state)
+                    ->colors(PlanLineItem::$sourceColors),
+
+                Tables\Columns\TextColumn::make('format')
+                    ->label('Format')
                     ->weight('bold')
-                    ->description(fn ($record) => $record->venue_name)
+                    ->description(fn ($record) => collect($record->targeting ?? [])->join(', '))
                     ->searchable(),
-
-                Tables\Columns\TextColumn::make('location_city')
-                    ->label('Thành phố')
-                    ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('venue_type')
-                    ->label('Loại')
-                    ->formatStateUsing(fn ($state) => Screen::$venueTypes[$state] ?? $state)
-                    ->badge()
-                    ->color('info')
-                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Từ ngày')
@@ -239,77 +144,137 @@ class LineItemsRelationManager extends RelationManager
                     ->label('Đến ngày')
                     ->date('d/m/Y'),
 
-                Tables\Columns\TextColumn::make('spots_per_hour')
-                    ->label('Spots/giờ')
-                    ->alignCenter(),
+                Tables\Columns\TextColumn::make('unit')
+                    ->label('Đơn vị')
+                    ->badge()
+                    ->color('gray'),
 
-                Tables\Columns\TextColumn::make('daily_hours')
-                    ->label('Giờ/ngày')
-                    ->alignCenter()
-                    ->suffix('h'),
-
-                Tables\Columns\TextColumn::make('total_spots')
-                    ->label('Tổng spots')
-                    ->numeric(decimalPlaces: 0)
+                Tables\Columns\TextColumn::make('guaranteed_units')
+                    ->label('KPI')
+                    ->numeric(decimalPlaces: 0, thousandsSeparator: '.')
                     ->alignEnd(),
 
-                Tables\Columns\TextColumn::make('rate_card_price')
-                    ->label('Giá niêm yết')
+                Tables\Columns\TextColumn::make('unit_cost')
+                    ->label('Đơn giá')
                     ->money('VND')
                     ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('discount_pct')
-                    ->label('CK%')
-                    ->suffix('%')
-                    ->alignCenter()
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\TextColumn::make('net_price')
-                    ->label('Giá net')
+                Tables\Columns\TextColumn::make('line_budget')
+                    ->label('Ngân sách')
                     ->money('VND')
                     ->alignEnd()
                     ->weight('bold'),
+
+                Tables\Columns\TextColumn::make('createdBy.name')
+                    ->label('Người tạo')
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\BadgeColumn::make('status')
+                    ->label('Trạng thái')
+                    ->formatStateUsing(fn ($state) => PlanLineItem::$statuses[$state] ?? $state)
+                    ->colors(PlanLineItem::$statusColors),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
-                    ->label('+ Thêm màn hình'),
+                    ->label('+ Thêm line item')
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $data['created_by'] = auth()->id();
+                        $data['source']     = auth()->user()->hasRole('adops') ? 'adops' : 'sale';
+                        $data['status']     = 'pending';
+                        return $data;
+                    }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    // ── Confirm (any party can confirm a pending item) ───────
+                    Tables\Actions\Action::make('confirm')
+                        ->label('Xác nhận OK')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn (PlanLineItem $record) => $record->status === 'pending')
+                        ->requiresConfirmation()
+                        ->modalHeading('Xác nhận line item này đã OK?')
+                        ->action(function (PlanLineItem $record) {
+                            $record->update([
+                                'status'       => 'confirmed',
+                                'confirmed_by' => auth()->id(),
+                                'confirmed_at' => now(),
+                            ]);
+                            Notification::make()->title('Line item đã được xác nhận')->success()->send();
+                        }),
+
+                    // ── Reject (can reject the OTHER party's items) ──────────
+                    Tables\Actions\Action::make('reject_item')
+                        ->label('Từ chối')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->visible(fn (PlanLineItem $record) =>
+                            $record->status === 'pending'
+                            && $record->created_by !== auth()->id()
+                        )
+                        ->form([
+                            Forms\Components\Textarea::make('rejection_reason')
+                                ->label('Lý do từ chối')
+                                ->required()
+                                ->rows(3),
+                        ])
+                        ->modalHeading('Từ chối line item này')
+                        ->action(function (PlanLineItem $record, array $data) {
+                            $record->update([
+                                'status'           => 'rejected',
+                                'rejected_by'      => auth()->id(),
+                                'rejected_at'      => now(),
+                                'rejection_reason' => $data['rejection_reason'],
+                            ]);
+                            Notification::make()->title('Line item đã bị từ chối')->danger()->send();
+                        }),
+
+                    // ── Reopen rejected item (original creator only) ─────────
+                    Tables\Actions\Action::make('reopen')
+                        ->label('Mở lại')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('warning')
+                        ->visible(fn (PlanLineItem $record) =>
+                            $record->status === 'rejected'
+                            && $record->created_by === auth()->id()
+                        )
+                        ->requiresConfirmation()
+                        ->modalHeading('Mở lại line item này?')
+                        ->action(function (PlanLineItem $record) {
+                            $record->update([
+                                'status'           => 'pending',
+                                'rejected_by'      => null,
+                                'rejected_at'      => null,
+                                'rejection_reason' => null,
+                            ]);
+                            Notification::make()->title('Line item đã được mở lại')->success()->send();
+                        }),
+
+                    // ── Edit (own items only, while pending) ─────────────────
+                    Tables\Actions\EditAction::make()
+                        ->visible(fn (PlanLineItem $record) =>
+                            $record->created_by === auth()->id()
+                            && $record->status === 'pending'
+                        ),
+
+                    // ── Delete (own items only) ──────────────────────────────
+                    Tables\Actions\DeleteAction::make()
+                        ->visible(fn (PlanLineItem $record) =>
+                            $record->created_by === auth()->id()
+                        ),
                 ]),
             ]);
     }
 
-    /** Recalculate total_spots preview in form */
-    private static function recalcSpots(Get $get, Set $set): void
+    private static function recalcBudget(Forms\Get $get, Forms\Set $set): void
     {
-        $start       = $get('start_date');
-        $end         = $get('end_date');
-        $spotsPerHour = (int) $get('spots_per_hour');
-        $dailyHours  = (int) $get('daily_hours');
+        $units = (float) $get('guaranteed_units');
+        $cost  = (float) $get('unit_cost');
 
-        if ($start && $end && $spotsPerHour && $dailyHours) {
-            $days = \Carbon\Carbon::parse($start)->diffInDays(\Carbon\Carbon::parse($end)) + 1;
-            $set('total_spots', number_format($spotsPerHour * $dailyHours * $days, 0, ',', '.'));
-        }
-    }
-
-    /** Recalculate net_price preview in form */
-    private static function recalcPrice(Get $get, Set $set): void
-    {
-        $raw      = str_replace('.', '', (string) $get('rate_card_price'));
-        $price    = (float) $raw;
-        $discount = (float) $get('discount_pct');
-
-        if ($price > 0) {
-            $net = $price * (1 - $discount / 100);
-            $set('net_price', number_format($net, 0, ',', '.'));
+        if ($units > 0 && $cost > 0) {
+            $set('line_budget', number_format($units * $cost, 0, ',', '.'));
         }
     }
 }

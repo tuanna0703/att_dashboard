@@ -12,7 +12,6 @@ use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
-use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -60,35 +59,14 @@ class PlanResource extends Resource
                     ->prefix('v')
                     ->disabled(),
 
-                Forms\Components\TextInput::make('campaign_name')
-                    ->label('Tên campaign')
-                    ->required()
-                    ->maxLength(200)
-                    ->columnSpan(2),
-
-                Forms\Components\DatePicker::make('start_date')
-                    ->label('Ngày bắt đầu')
-                    ->displayFormat('d/m/Y'),
-
-                Forms\Components\DatePicker::make('end_date')
-                    ->label('Ngày kết thúc')
-                    ->displayFormat('d/m/Y')
-                    ->after('start_date'),
-
                 Forms\Components\TextInput::make('budget')
                     ->label('Ngân sách (VND)')
                     ->prefix('₫')
-                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                    ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
-                    ->afterStateHydrated(function ($component, $state) {
-                        if ($state !== null && $state !== '') {
-                            $component->state(number_format((float) $state, 0, ',', '.'));
-                        }
-                    })
-                    ->helperText('Tự động cập nhật khi thêm/xóa line items'),
+                    ->disabled()
+                    ->helperText('Tự động tính từ line items'),
 
                 Forms\Components\TextInput::make('screen_count')
-                    ->label('Số màn hình')
+                    ->label('Số line items')
                     ->numeric()
                     ->disabled()
                     ->helperText('Tự động tính từ line items'),
@@ -116,27 +94,13 @@ class PlanResource extends Resource
                     ->formatStateUsing(fn ($state) => Plan::$statuses[$state] ?? $state)
                     ->color(fn ($state) => Plan::$statusColors[$state] ?? 'gray'),
 
-                TextEntry::make('campaign_name')
-                    ->label('Tên campaign')
-                    ->columnSpan(2),
-
                 TextEntry::make('brief.brief_no')
                     ->label('Brief')
                     ->url(fn ($record) => BriefResource::getUrl('view', ['record' => $record->brief_id]))
                     ->color('primary'),
 
-                TextEntry::make('createdBy.name')
+                TextEntry::make('adops.name')
                     ->label('AdOps')
-                    ->placeholder('—'),
-
-                TextEntry::make('start_date')
-                    ->label('Ngày bắt đầu')
-                    ->date('d/m/Y')
-                    ->placeholder('—'),
-
-                TextEntry::make('end_date')
-                    ->label('Ngày kết thúc')
-                    ->date('d/m/Y')
                     ->placeholder('—'),
 
                 TextEntry::make('budget')
@@ -146,7 +110,7 @@ class PlanResource extends Resource
                     ->weight('bold'),
 
                 TextEntry::make('screen_count')
-                    ->label('Số màn hình')
+                    ->label('Số line items')
                     ->placeholder('—'),
 
                 TextEntry::make('note')
@@ -196,18 +160,8 @@ class PlanResource extends Resource
                     ->url(fn ($record) => BriefResource::getUrl('view', ['record' => $record->brief_id]))
                     ->color('primary'),
 
-                Tables\Columns\TextColumn::make('campaign_name')
-                    ->label('Campaign')
-                    ->searchable()
-                    ->limit(40),
-
-                Tables\Columns\TextColumn::make('createdBy.name')
+                Tables\Columns\TextColumn::make('adops.name')
                     ->label('AdOps')
-                    ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('start_date')
-                    ->label('Bắt đầu')
-                    ->date('d/m/Y')
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('budget')

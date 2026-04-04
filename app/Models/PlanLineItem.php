@@ -10,70 +10,74 @@ class PlanLineItem extends Model
 {
     protected $fillable = [
         'plan_id',
-        'screen_id',
-        'venue_name',
-        'venue_type',
-        'location_city',
-        'screen_code',
+        'brief_line_item_id',
+        'created_by',
+        'source',
+        'format',
+        'targeting',
         'start_date',
         'end_date',
-        'spot_duration',
-        'spots_per_hour',
-        'daily_hours',
-        'total_spots',
-        'pricing_model',
-        'rate_card_price',
-        'discount_pct',
-        'net_price',
-        'cpm',
-        'estimated_impressions',
+        'unit',
+        'guaranteed_units',
+        'unit_cost',
+        'line_budget',
+        'est_impression',
+        'status',
+        'confirmed_by',
+        'confirmed_at',
+        'rejected_by',
+        'rejected_at',
+        'rejection_reason',
         'notes',
         'sort_order',
     ];
 
     protected $casts = [
-        'start_date'           => 'date',
-        'end_date'             => 'date',
-        'rate_card_price'      => 'decimal:2',
-        'discount_pct'         => 'decimal:2',
-        'net_price'            => 'decimal:2',
-        'cpm'                  => 'decimal:2',
-        'total_spots'          => 'decimal:0',
-        'estimated_impressions' => 'decimal:0',
+        'targeting'       => 'array',
+        'start_date'      => 'date',
+        'end_date'        => 'date',
+        'guaranteed_units'=> 'decimal:2',
+        'unit_cost'       => 'decimal:2',
+        'line_budget'     => 'decimal:2',
+        'confirmed_at'    => 'datetime',
+        'rejected_at'     => 'datetime',
     ];
 
-    // ─── Auto-calculate derived fields ───────────────────────────────────────
+    public static array $statuses = [
+        'pending'   => 'Chờ xác nhận',
+        'confirmed' => 'Đã xác nhận',
+        'rejected'  => 'Từ chối',
+    ];
+
+    public static array $statusColors = [
+        'pending'   => 'warning',
+        'confirmed' => 'success',
+        'rejected'  => 'danger',
+    ];
+
+    public static array $sourceLabels = [
+        'sale'  => 'Sale',
+        'adops' => 'AdOps',
+    ];
+
+    public static array $sourceColors = [
+        'sale'  => 'info',
+        'adops' => 'primary',
+    ];
+
+    // ─── Auto-calculate line_budget ───────────────────────────────────────────
 
     protected static function booted(): void
     {
         $calc = function (PlanLineItem $item) {
-            // Total spots = spots_per_hour × daily_hours × duration_days
-            if ($item->spots_per_hour && $item->daily_hours && $item->start_date && $item->end_date) {
-                $days = $item->start_date->diffInDays($item->end_date) + 1;
-                $item->total_spots = $item->spots_per_hour * $item->daily_hours * $days;
-            }
-
-            // Net price after discount
-            if ($item->rate_card_price !== null && $item->discount_pct !== null) {
-                $item->net_price = $item->rate_card_price * (1 - $item->discount_pct / 100);
-            }
-
-            // Auto-populate screen info from screen FK if provided
-            if ($item->screen_id && ! $item->isDirty('venue_name')) {
-                $screen = Screen::find($item->screen_id);
-                if ($screen) {
-                    $item->venue_name   = $item->venue_name    ?: $screen->venue_name;
-                    $item->venue_type   = $item->venue_type    ?: $screen->venue_type;
-                    $item->location_city = $item->location_city ?: $screen->location_city;
-                    $item->screen_code  = $item->screen_code   ?: $screen->code;
-                }
+            if ($item->guaranteed_units !== null && $item->unit_cost !== null) {
+                $item->line_budget = (float) $item->guaranteed_units * (float) $item->unit_cost;
             }
         };
 
         static::creating($calc);
         static::updating($calc);
 
-        // Recalculate plan totals when line item changes
         static::saved(fn (PlanLineItem $item) => $item->plan->recalculateTotals());
         static::deleted(fn (PlanLineItem $item) => $item->plan->recalculateTotals());
     }
@@ -85,9 +89,24 @@ class PlanLineItem extends Model
         return $this->belongsTo(Plan::class);
     }
 
-    public function screen(): BelongsTo
+    public function briefLineItem(): BelongsTo
     {
-        return $this->belongsTo(Screen::class);
+        return $this->belongsTo(BriefLineItem::class);
+    }
+
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function confirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
+    }
+
+    public function rejectedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function bookingLineItems(): HasMany

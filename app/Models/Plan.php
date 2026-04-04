@@ -17,27 +17,19 @@ class Plan extends Model
         'plan_no',
         'brief_id',
         'version',
-        'campaign_name',
-        'start_date',
-        'end_date',
         'budget',
-        'cpm',
         'screen_count',
-        'duration_days',
         'note',
         'file_path',
         'sale_comment',
         'status',
-        'created_by',
+        'adops_id',
         'responded_by',
         'responded_at',
     ];
 
     protected $casts = [
-        'start_date'   => 'date',
-        'end_date'     => 'date',
         'budget'       => 'decimal:2',
-        'cpm'          => 'decimal:2',
         'responded_at' => 'datetime',
     ];
 
@@ -68,7 +60,6 @@ class Plan extends Model
                 $plan->plan_no = 'PLN-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
             }
 
-            // Auto version per brief
             if (empty($plan->version)) {
                 $plan->version = Plan::where('brief_id', $plan->brief_id)->max('version') + 1;
             }
@@ -82,9 +73,9 @@ class Plan extends Model
         return $this->belongsTo(Brief::class);
     }
 
-    public function createdBy(): BelongsTo
+    public function adops(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'adops_id');
     }
 
     public function respondedBy(): BelongsTo
@@ -111,16 +102,15 @@ class Plan extends Model
 
     public function recalculateTotals(): void
     {
-        $totals = $this->lineItems()->selectRaw('
-            SUM(net_price) as total_net,
-            SUM(estimated_impressions) as total_impressions,
-            COUNT(*) as total_screens
-        ')->first();
+        $totals = $this->lineItems()
+            ->whereNot('status', 'rejected')
+            ->selectRaw('SUM(line_budget) as total_budget, COUNT(*) as total_count')
+            ->first();
 
         $this->withoutEvents(function () use ($totals) {
             $this->update([
-                'budget'       => $totals->total_net ?? $this->budget,
-                'screen_count' => $totals->total_screens ?? $this->screen_count,
+                'budget'       => $totals->total_budget ?? 0,
+                'screen_count' => $totals->total_count ?? 0,
             ]);
         });
     }

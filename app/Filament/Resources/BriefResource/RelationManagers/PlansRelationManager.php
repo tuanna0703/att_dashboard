@@ -7,14 +7,13 @@ use App\Events\Plan\PlanCreated;
 use App\Events\Plan\PlanRejected;
 use App\Events\Plan\PlanRePlanRequested;
 use App\Events\Plan\PlanSubmitted;
-use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\PlanResource;
 use App\Models\Plan;
+use App\Models\PlanLineItem;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Support\RawJs;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Storage;
@@ -36,11 +35,8 @@ class PlansRelationManager extends RelationManager
 
     public function form(Form $form): Form
     {
-        $brief = $this->getOwnerRecord();
-
         return $form->schema([
             Forms\Components\Section::make('Thông tin kế hoạch')->schema([
-
                 Forms\Components\TextInput::make('plan_no')
                     ->label('Mã Plan')
                     ->placeholder('Tự động tạo')
@@ -51,56 +47,6 @@ class PlansRelationManager extends RelationManager
                     ->label('Phiên bản')
                     ->disabled()
                     ->dehydrated(false),
-
-                Forms\Components\TextInput::make('campaign_name')
-                    ->label('Tên campaign')
-                    ->required()
-                    ->default($brief->campaign_name)
-                    ->maxLength(200)
-                    ->columnSpan(2),
-
-                Forms\Components\DatePicker::make('start_date')
-                    ->label('Ngày bắt đầu')
-                    ->default($brief->start_date)
-                    ->displayFormat('d/m/Y'),
-
-                Forms\Components\DatePicker::make('end_date')
-                    ->label('Ngày kết thúc')
-                    ->default($brief->end_date)
-                    ->displayFormat('d/m/Y')
-                    ->after('start_date'),
-
-                Forms\Components\TextInput::make('budget')
-                    ->label('Ngân sách (VND)')
-                    ->prefix('₫')
-                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                    ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
-                    ->afterStateHydrated(function ($component, $state) {
-                        if ($state !== null && $state !== '') {
-                            $component->state(number_format((float) $state, 0, ',', '.'));
-                        }
-                    })
-                    ->default($brief->budget ? number_format((float) $brief->budget, 0, ',', '.') : null),
-
-                Forms\Components\TextInput::make('cpm')
-                    ->label('CPM (VND)')
-                    ->prefix('₫')
-                    ->numeric()
-                    ->default($brief->cpm ?? null),
-
-                Forms\Components\TextInput::make('screen_count')
-                    ->label('Số màn hình')
-                    ->numeric()
-                    ->minValue(1),
-
-                Forms\Components\TextInput::make('duration_days')
-                    ->label('Số ngày chạy')
-                    ->numeric()
-                    ->minValue(1),
-
-            ])->columns(2),
-
-            Forms\Components\Section::make('Nội dung kế hoạch')->schema([
 
                 Forms\Components\Textarea::make('note')
                     ->label('Ghi chú kế hoạch (AdOps)')
@@ -120,8 +66,7 @@ class PlansRelationManager extends RelationManager
                         'application/msword',
                     ])
                     ->columnSpanFull(),
-
-            ]),
+            ])->columns(2),
         ]);
     }
 
@@ -140,23 +85,18 @@ class PlansRelationManager extends RelationManager
                     ->prefix('v')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('createdBy.name')
+                Tables\Columns\TextColumn::make('adops.name')
                     ->label('AdOps')
-                    ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('start_date')
-                    ->label('Bắt đầu')
-                    ->date('d/m/Y')
-                    ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('end_date')
-                    ->label('Kết thúc')
-                    ->date('d/m/Y')
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Ngân sách')
                     ->money('VND')
+                    ->placeholder('—'),
+
+                Tables\Columns\TextColumn::make('screen_count')
+                    ->label('Line items')
+                    ->alignCenter()
                     ->placeholder('—'),
 
                 Tables\Columns\IconColumn::make('file_path')
@@ -186,8 +126,8 @@ class PlansRelationManager extends RelationManager
                 Tables\Actions\CreateAction::make()
                     ->label('+ Tạo Plan')
                     ->mutateFormDataUsing(function (array $data): array {
-                        $data['created_by'] = auth()->id();
-                        $data['status']     = 'draft';
+                        $data['adops_id'] = auth()->id();
+                        $data['status']   = 'draft';
                         return $data;
                     })
                     ->after(function (Plan $record) {
@@ -199,7 +139,7 @@ class PlansRelationManager extends RelationManager
                                 'version' => $record->version,
                             ]
                         ));
-                        Notification::make()->title('Plan đã được tạo')->success()->send();
+                        Notification::make()->title('Plan đã được tạo — thêm line items để hoàn thiện')->success()->send();
                     })
                     ->visible(fn () => auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         && in_array($this->getOwnerRecord()->status, [
@@ -209,8 +149,6 @@ class PlansRelationManager extends RelationManager
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
-                    Tables\Actions\ViewAction::make(),
-
                     Tables\Actions\Action::make('view_plan_detail')
                         ->label('Xem chi tiết & Line items')
                         ->icon('heroicon-o-clipboard-document-list')
@@ -218,7 +156,9 @@ class PlansRelationManager extends RelationManager
                         ->url(fn (Plan $record) => PlanResource::getUrl('view', ['record' => $record])),
 
                     Tables\Actions\EditAction::make()
-                        ->visible(fn (Plan $record) => $record->status === 'draft'),
+                        ->visible(fn (Plan $record) => $record->status === 'draft'
+                            && $record->adops_id === auth()->id()
+                        ),
 
                     // ── AdOps: Tạo plan điều chỉnh từ plan bị re_plan ────────
                     Tables\Actions\Action::make('create_revision')
@@ -229,93 +169,69 @@ class PlansRelationManager extends RelationManager
                             && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         )
                         ->form([
-                            Forms\Components\Grid::make(2)->schema([
-                                Forms\Components\TextInput::make('campaign_name')
-                                    ->label('Tên campaign')
-                                    ->required()
-                                    ->maxLength(200)
-                                    ->columnSpan(2),
+                            Forms\Components\Textarea::make('note')
+                                ->label('Ghi chú / Điều chỉnh so với plan cũ')
+                                ->rows(4)
+                                ->columnSpanFull(),
 
-                                Forms\Components\DatePicker::make('start_date')
-                                    ->label('Ngày bắt đầu')
-                                    ->displayFormat('d/m/Y'),
+                            Forms\Components\FileUpload::make('file_path')
+                                ->label('File kế hoạch mới')
+                                ->directory('plans')
+                                ->acceptedFileTypes([
+                                    'application/pdf', 'image/*',
+                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                    'application/vnd.ms-excel',
+                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                    'application/msword',
+                                ])
+                                ->columnSpanFull(),
 
-                                Forms\Components\DatePicker::make('end_date')
-                                    ->label('Ngày kết thúc')
-                                    ->displayFormat('d/m/Y')
-                                    ->afterOrEqual('start_date'),
-
-                                Forms\Components\TextInput::make('budget')
-                                    ->label('Ngân sách (VND)')
-                                    ->prefix('₫')
-                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                    ->dehydrateStateUsing(fn ($state) => $state ? (float) str_replace('.', '', (string) $state) : null)
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if ($state !== null && $state !== '') {
-                                            $component->state(number_format((float) $state, 0, ',', '.'));
-                                        }
-                                    }),
-
-                                Forms\Components\TextInput::make('cpm')
-                                    ->label('CPM (VND)')
-                                    ->prefix('₫')
-                                    ->numeric(),
-
-                                Forms\Components\TextInput::make('screen_count')
-                                    ->label('Số màn hình')
-                                    ->numeric()
-                                    ->minValue(1),
-
-                                Forms\Components\TextInput::make('duration_days')
-                                    ->label('Số ngày chạy')
-                                    ->numeric()
-                                    ->minValue(1),
-
-                                Forms\Components\Textarea::make('note')
-                                    ->label('Ghi chú / Điều chỉnh so với plan cũ')
-                                    ->rows(4)
-                                    ->columnSpan(2),
-
-                                Forms\Components\FileUpload::make('file_path')
-                                    ->label('File kế hoạch mới')
-                                    ->directory('plans')
-                                    ->acceptedFileTypes([
-                                        'application/pdf', 'image/*',
-                                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                        'application/vnd.ms-excel',
-                                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                        'application/msword',
-                                    ])
-                                    ->columnSpan(2),
-                            ]),
+                            Forms\Components\Toggle::make('copy_line_items')
+                                ->label('Sao chép line items từ plan cũ')
+                                ->default(true)
+                                ->helperText('Sao chép các line items chưa bị từ chối, reset về trạng thái Chờ xác nhận'),
                         ])
                         ->modalHeading('Tạo Plan điều chỉnh')
                         ->modalDescription(fn (Plan $record) => "Tạo phiên bản mới dựa trên Plan {$record->plan_no}. Lý do điều chỉnh: {$record->sale_comment}")
                         ->fillForm(fn (Plan $record) => [
-                            'campaign_name' => $record->campaign_name,
-                            'start_date'    => $record->start_date,
-                            'end_date'      => $record->end_date,
-                            'budget'        => $record->budget,
-                            'cpm'           => $record->cpm,
-                            'screen_count'  => $record->screen_count,
-                            'duration_days' => $record->duration_days,
-                            'note'          => $record->note,
+                            'note'             => $record->note,
+                            'copy_line_items'  => true,
                         ])
                         ->action(function (Plan $record, array $data) {
                             $newPlan = Plan::create([
-                                'brief_id'      => $record->brief_id,
-                                'campaign_name' => $data['campaign_name'],
-                                'start_date'    => $data['start_date'] ?? null,
-                                'end_date'      => $data['end_date'] ?? null,
-                                'budget'        => $data['budget'] ?? null,
-                                'cpm'           => $data['cpm'] ?? null,
-                                'screen_count'  => $data['screen_count'] ?? null,
-                                'duration_days' => $data['duration_days'] ?? null,
-                                'note'          => $data['note'] ?? null,
-                                'file_path'     => $data['file_path'] ?? null,
-                                'status'        => 'draft',
-                                'created_by'    => auth()->id(),
+                                'brief_id'  => $record->brief_id,
+                                'note'      => $data['note'] ?? null,
+                                'file_path' => $data['file_path'] ?? null,
+                                'status'    => 'draft',
+                                'adops_id'  => auth()->id(),
                             ]);
+
+                            // Copy non-rejected line items and reset their status
+                            if (! empty($data['copy_line_items'])) {
+                                $record->lineItems()
+                                    ->where('status', '!=', 'rejected')
+                                    ->get()
+                                    ->each(function (PlanLineItem $item) use ($newPlan) {
+                                        PlanLineItem::create([
+                                            'plan_id'            => $newPlan->id,
+                                            'brief_line_item_id' => $item->brief_line_item_id,
+                                            'created_by'         => $item->created_by,
+                                            'source'             => $item->source,
+                                            'format'             => $item->format,
+                                            'targeting'          => $item->targeting,
+                                            'start_date'         => $item->start_date,
+                                            'end_date'           => $item->end_date,
+                                            'unit'               => $item->unit,
+                                            'guaranteed_units'   => $item->guaranteed_units,
+                                            'unit_cost'          => $item->unit_cost,
+                                            'line_budget'        => $item->line_budget,
+                                            'est_impression'     => $item->est_impression,
+                                            'status'             => 'pending',
+                                            'notes'              => $item->notes,
+                                            'sort_order'         => $item->sort_order,
+                                        ]);
+                                    });
+                            }
 
                             event(new PlanCreated(
                                 subject: $newPlan,
@@ -338,7 +254,7 @@ class PlansRelationManager extends RelationManager
                         ->icon('heroicon-o-paper-airplane')
                         ->color('info')
                         ->visible(fn (Plan $record) => $record->status === 'draft'
-                            && $record->created_by === auth()->id()
+                            && $record->adops_id === auth()->id()
                         )
                         ->requiresConfirmation()
                         ->modalHeading('Xác nhận gửi Plan cho Sale review?')
@@ -374,7 +290,6 @@ class PlansRelationManager extends RelationManager
                                 'responded_at' => now(),
                             ]);
 
-                            // Các plan khác của brief này → superseded
                             $record->brief->plans()
                                 ->where('id', '!=', $record->id)
                                 ->whereNotIn('status', ['accepted', 'rejected'])
