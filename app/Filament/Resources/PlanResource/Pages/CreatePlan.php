@@ -4,14 +4,17 @@ namespace App\Filament\Resources\PlanResource\Pages;
 
 use App\Events\Plan\PlanCreated;
 use App\Filament\Resources\PlanResource;
+use App\Models\AdNetwork;
 use App\Models\Brief;
 use App\Models\BriefLineItem;
 use App\Models\Plan;
 use App\Models\PlanLineItem;
+use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Filament\Support\RawJs;
 use Illuminate\Support\HtmlString;
 
 class CreatePlan extends CreateRecord
@@ -45,8 +48,8 @@ class CreatePlan extends CreateRecord
 
         parent::mount();
 
-        $brief        = Brief::with(['customer', 'sale', 'briefLineItems'])->findOrFail($this->briefId);
-        $fromPlanId   = (int) request()->query('from_plan_id', 0);
+        $brief      = Brief::with(['customer', 'sale', 'briefLineItems'])->findOrFail($this->briefId);
+        $fromPlanId = (int) request()->query('from_plan_id', 0);
 
         if ($fromPlanId) {
             // Pre-populate from a previous plan's line items (create_revision flow)
@@ -61,11 +64,15 @@ class CreatePlan extends CreateRecord
                         'targeting'          => $item->targeting ?? [],
                         'start_date'         => $item->start_date?->format('Y-m-d'),
                         'end_date'           => $item->end_date?->format('Y-m-d'),
+                        'live_days'          => $item->live_days,
                         'unit'               => $item->unit,
                         'guaranteed_units'   => $item->guaranteed_units,
                         'unit_cost'          => $item->unit_cost,
+                        'daily_spots'        => $item->daily_spots,
                         'line_budget'        => $item->line_budget,
                         'est_impression'     => $item->est_impression,
+                        'est_impression_day' => $item->est_impression_day,
+                        'est_ad_spot'        => $item->est_ad_spot,
                         'source'             => $item->source,
                         'created_by'         => $item->created_by,
                         'notes'              => $item->notes,
@@ -82,11 +89,17 @@ class CreatePlan extends CreateRecord
                     'targeting'          => $item->targeting ?? [],
                     'start_date'         => $item->start_date?->format('Y-m-d'),
                     'end_date'           => $item->end_date?->format('Y-m-d'),
+                    'live_days'          => $item->live_days,
                     'unit'               => $item->unit,
                     'guaranteed_units'   => $item->guaranteed_units,
                     'unit_cost'          => $item->unit_cost,
-                    'line_budget'        => $item->line_budget,
+                    'daily_spots'        => $item->daily_spots ?? null,
+                    'line_budget'        => $item->guaranteed_units && $item->unit_cost
+                        ? (float) $item->guaranteed_units * (float) $item->unit_cost
+                        : null,
                     'est_impression'     => $item->est_impression,
+                    'est_impression_day' => $item->est_impression_day ?? null,
+                    'est_ad_spot'        => $item->est_ad_spot ?? null,
                     'source'             => 'sale',
                     'created_by'         => $brief->sale_id,
                     'notes'              => null,
@@ -117,7 +130,7 @@ class CreatePlan extends CreateRecord
         $briefStart = $brief?->briefLineItems->min('start_date');
         $briefEnd   = $brief?->briefLineItems->max('end_date');
         $dateRange  = ($briefStart && $briefEnd)
-            ? \Carbon\Carbon::parse($briefStart)->format('d/m/Y') . ' → ' . \Carbon\Carbon::parse($briefEnd)->format('d/m/Y')
+            ? Carbon::parse($briefStart)->format('d/m/Y') . ' → ' . Carbon::parse($briefEnd)->format('d/m/Y')
             : '—';
 
         return $form->schema([
@@ -198,88 +211,175 @@ class CreatePlan extends CreateRecord
                     Forms\Components\Repeater::make('line_items')
                         ->label('')
                         ->schema([
-                            // Row 1: Format + Targeting
-                            Forms\Components\TextInput::make('format')
-                                ->label('Format')
-                                ->required()
-                                ->placeholder('VD: Billboard, Lightbox, Video...')
-                                ->columnSpan(2),
+                            // ── Cột trái: thông tin booking ──────────────────
+                            Forms\Components\Section::make()->schema([
+                                Forms\Components\Select::make('format')
+                                    ->label('Format')
+                                    ->options(['6s' => '6s', '15s' => '15s', '30s' => '30s'])
+                                    ->placeholder('Chọn format…'),
 
-                            Forms\Components\TagsInput::make('targeting')
-                                ->label('Targeting')
-                                ->placeholder('Thêm target...')
-                                ->columnSpan(2),
+                                Forms\Components\Select::make('targeting')
+                                    ->label('Network')
+                                    ->options(fn () => AdNetwork::where('is_active', true)
+                                        ->orderBy('name')
+                                        ->pluck('name', 'id'))
+                                    ->multiple()
+                                    ->searchable()
+                                    ->preload()
+                                    ->placeholder('Tìm và chọn network…'),
 
-                            // Row 2: Dates + Unit + Impression
-                            Forms\Components\DatePicker::make('start_date')
-                                ->label('Từ ngày')
-                                ->displayFormat('d/m/Y')
-                                ->required(),
+                                Forms\Components\DatePicker::make('start_date')
+                                    ->label('Start Date')
+                                    ->displayFormat('d/m/Y')
+                                    ->required()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
+                                        self::recalcLineItem($get, $set)
+                                    ),
 
-                            Forms\Components\DatePicker::make('end_date')
-                                ->label('Đến ngày')
-                                ->displayFormat('d/m/Y')
-                                ->afterOrEqual('start_date')
-                                ->required(),
+                                Forms\Components\DatePicker::make('end_date')
+                                    ->label('End Date')
+                                    ->displayFormat('d/m/Y')
+                                    ->required()
+                                    ->afterOrEqual('start_date')
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
+                                        self::recalcLineItem($get, $set)
+                                    ),
 
-                            Forms\Components\Select::make('unit')
-                                ->label('Đơn vị tính')
-                                ->options(BriefLineItem::$units)
-                                ->required(),
+                                Forms\Components\TextInput::make('live_days')
+                                    ->label('Live Days')
+                                    ->numeric()
+                                    ->disabled()
+                                    ->dehydrated(true),
 
-                            Forms\Components\TextInput::make('est_impression')
-                                ->label('Est. Impressions')
-                                ->numeric()
-                                ->nullable(),
+                                Forms\Components\Select::make('unit')
+                                    ->label('Unit')
+                                    ->options(BriefLineItem::$units)
+                                    ->default('cpm')
+                                    ->required()
+                                    ->live()
+                                    ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
+                                        self::recalcLineItem($get, $set)
+                                    ),
 
-                            // Row 3: KPI + Price + Budget
-                            Forms\Components\TextInput::make('guaranteed_units')
-                                ->label('KPI (Số lượng)')
-                                ->numeric()
-                                ->required()
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
-                                    self::recalcBudget($get, $set)
-                                ),
+                                Forms\Components\TextInput::make('guaranteed_units')
+                                    ->label(fn (Forms\Get $get) => match ($get('unit')) {
+                                        'cpd'   => 'Số màn hình',
+                                        'io'    => 'Spots/Day',
+                                        default => 'Guaranteed Units',
+                                    })
+                                    ->numeric()
+                                    ->required()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
+                                        self::recalcLineItem($get, $set)
+                                    ),
 
-                            Forms\Components\TextInput::make('unit_cost')
-                                ->label('Đơn giá (₫)')
-                                ->numeric()
-                                ->required()
-                                ->live(onBlur: true)
-                                ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
-                                    self::recalcBudget($get, $set)
-                                ),
+                                Forms\Components\TextInput::make('unit_cost')
+                                    ->label(fn (Forms\Get $get) => match ($get('unit')) {
+                                        'cpd'   => 'Rate/Screen/Day',
+                                        'io'    => 'Rate/Spot',
+                                        default => 'Unit Cost',
+                                    })
+                                    ->numeric()
+                                    ->required()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
+                                        self::recalcLineItem($get, $set)
+                                    ),
 
-                            Forms\Components\TextInput::make('line_budget')
-                                ->label('Tổng ngân sách')
-                                ->prefix('₫')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->helperText('= KPI × Đơn giá'),
+                                Forms\Components\TextInput::make('daily_spots')
+                                    ->label('Daily Spots/Screen')
+                                    ->helperText('Số spot/màn hình/ngày')
+                                    ->numeric()
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(fn (Forms\Get $get, Forms\Set $set) =>
+                                        self::recalcLineItem($get, $set)
+                                    )
+                                    ->hidden(fn (Forms\Get $get) => $get('unit') !== 'cpd'),
 
-                            Forms\Components\Textarea::make('notes')
-                                ->label('Ghi chú')
-                                ->rows(1)
-                                ->nullable(),
+                                Forms\Components\TextInput::make('line_budget')
+                                    ->label('Budget')
+                                    ->numeric()
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->columnSpanFull(),
 
-                            // Hidden fields — carry ownership metadata
-                            Forms\Components\Hidden::make('brief_line_item_id'),
-                            Forms\Components\Hidden::make('source'),
-                            Forms\Components\Hidden::make('created_by'),
+                                Forms\Components\Textarea::make('notes')
+                                    ->label('Ghi chú')
+                                    ->rows(1)
+                                    ->nullable()
+                                    ->columnSpanFull(),
+
+                                // Hidden fields — carry ownership metadata
+                                Forms\Components\Hidden::make('brief_line_item_id'),
+                                Forms\Components\Hidden::make('source'),
+                                Forms\Components\Hidden::make('created_by'),
+                            ])->columns(2)->columnSpan(1),
+
+                            // ── Cột phải: Est KPI ─────────────────────────────
+                            Forms\Components\Section::make('Est KPI')->schema([
+                                Forms\Components\TextInput::make('est_impression')
+                                    ->label('Est Impression')
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->live(onBlur: true)
+                                    ->dehydrateStateUsing(fn ($state) => $state ? (int) preg_replace('/\D/', '', $state) : null),
+
+                                Forms\Components\TextInput::make('est_impression_day')
+                                    ->label('Est Impression/Day')
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->live(onBlur: true)
+                                    ->dehydrateStateUsing(fn ($state) => $state ? (int) preg_replace('/\D/', '', $state) : null),
+
+                                Forms\Components\TextInput::make('est_ad_spot')
+                                    ->label('Est Ad Spot')
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->live(onBlur: true)
+                                    ->dehydrateStateUsing(fn ($state) => $state ? (int) preg_replace('/\D/', '', $state) : null),
+                            ])->columns(1)->columnSpan(1),
                         ])
-                        ->columns(4)
+                        ->columns(2)
                         ->addActionLabel('+ Thêm line item')
                         ->cloneable()
                         ->reorderable()
                         ->collapsible()
-                        ->itemLabel(fn (array $state) =>
-                            ($state['format'] ?? 'Line item')
-                            . (isset($state['start_date'])
-                                ? ' · ' . \Carbon\Carbon::parse($state['start_date'])->format('d/m/Y')
-                                  . ' → ' . \Carbon\Carbon::parse($state['end_date'] ?? $state['start_date'])->format('d/m/Y')
-                                : '')
-                        ),
+                        ->live()
+                        ->itemLabel(function (array $state): ?string {
+                            $networkIds = $state['targeting'] ?? [];
+                            if (is_string($networkIds)) {
+                                $networkIds = json_decode($networkIds, true) ?? [];
+                            }
+                            $networks = !empty($networkIds)
+                                ? AdNetwork::whereIn('id', (array) $networkIds)->orderBy('name')->pluck('name')->implode(', ')
+                                : null;
+                            $parts = array_filter([$networks, $state['format'] ?? null]);
+                            return $parts ? implode(' — ', $parts) : 'Line item mới';
+                        }),
+
+                    // ── Footer: tổng ngân sách kế hoạch ──────────────────────
+                    Forms\Components\Grid::make(4)
+                        ->schema([
+                            Forms\Components\Placeholder::make('budget_display')
+                                ->label('Tổng ngân sách kế hoạch')
+                                ->content(function (Forms\Get $get): HtmlString {
+                                    $items  = $get('line_items') ?? [];
+                                    $total  = collect($items)->sum(fn ($item) => (float) ($item['line_budget'] ?? 0));
+                                    $formatted = $total > 0
+                                        ? number_format($total, 0, ',', '.') . ' VND'
+                                        : '—';
+                                    return new HtmlString(
+                                        '<span class="text-xl font-bold text-primary-600 dark:text-primary-400">'
+                                        . e($formatted) .
+                                        '</span>'
+                                    );
+                                })
+                                ->columnSpan(4),
+                        ])
+                        ->columnSpanFull()
+                        ->extraAttributes([
+                            'class' => 'border-t border-gray-200 dark:border-gray-700 pt-4 mt-2',
+                        ]),
                 ]),
         ]);
     }
@@ -310,10 +410,14 @@ class CreatePlan extends CreateRecord
                 'targeting'          => $item['targeting'] ?? null,
                 'start_date'         => $item['start_date'] ?? null,
                 'end_date'           => $item['end_date'] ?? null,
+                'live_days'          => isset($item['live_days']) ? (int) $item['live_days'] : null,
                 'unit'               => $item['unit'] ?? null,
                 'guaranteed_units'   => isset($item['guaranteed_units']) ? (float) $item['guaranteed_units'] : null,
                 'unit_cost'          => isset($item['unit_cost']) ? (float) $item['unit_cost'] : null,
+                'daily_spots'        => isset($item['daily_spots']) ? (int) $item['daily_spots'] : null,
                 'est_impression'     => isset($item['est_impression']) ? (int) $item['est_impression'] : null,
+                'est_impression_day' => isset($item['est_impression_day']) ? (int) $item['est_impression_day'] : null,
+                'est_ad_spot'        => isset($item['est_ad_spot']) ? (int) $item['est_ad_spot'] : null,
                 'status'             => 'pending',
                 'notes'              => $item['notes'] ?? null,
                 'sort_order'         => $index,
@@ -344,13 +448,28 @@ class CreatePlan extends CreateRecord
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
 
-    private static function recalcBudget(Forms\Get $get, Forms\Set $set): void
+    private static function recalcLineItem(Forms\Get $get, Forms\Set $set): void
     {
-        $units = (float) ($get('guaranteed_units') ?? 0);
-        $cost  = (float) ($get('unit_cost') ?? 0);
+        $unit       = $get('unit') ?? 'cpm';
+        $guaranteed = (int) ($get('guaranteed_units') ?? 0);
+        $unitCost   = (float) ($get('unit_cost') ?? 0);
 
-        if ($units > 0 && $cost > 0) {
-            $set('line_budget', number_format($units * $cost, 0, ',', '.'));
+        // live_days from date range
+        $start    = $get('start_date');
+        $end      = $get('end_date');
+        $liveDays = 0;
+        if ($start && $end) {
+            $liveDays = max(0, Carbon::parse($start)->diffInDays(Carbon::parse($end)) + 1);
+            $set('live_days', $liveDays);
         }
+
+        // line_budget
+        $budget = match ($unit) {
+            'cpm'   => $guaranteed * $unitCost,
+            'cpd'   => $guaranteed * $unitCost * $liveDays,
+            'io'    => $guaranteed * $liveDays * $unitCost,
+            default => 0,
+        };
+        $set('line_budget', round($budget, 2));
     }
 }
