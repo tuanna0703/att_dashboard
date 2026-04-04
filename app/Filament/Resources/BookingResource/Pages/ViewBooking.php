@@ -147,6 +147,26 @@ class ViewBooking extends ViewRecord
                         ->color('primary')
                         ->placeholder('—'),
 
+                    TextEntry::make('total_budget')
+                        ->label('Ngân sách')
+                        ->money(fn (Booking $record) => $record->currency ?? 'VND')
+                        ->weight('bold')
+                        ->placeholder('—'),
+
+                    // Bắt đầu → Kết thúc cùng 1 dòng
+                    TextEntry::make('start_date')
+                        ->label('Thời gian')
+                        ->html()
+                        ->getStateUsing(fn (Booking $record) =>
+                            '<span class="tabular-nums text-sm">' . ($record->start_date?->format('d/m/Y') ?? '—') . '</span>'
+                            . '<span class="text-gray-400 dark:text-gray-500 text-xs mx-1.5">→</span>'
+                            . '<span class="tabular-nums text-sm">' . ($record->end_date?->format('d/m/Y') ?? '—') . '</span>'
+                        ),
+
+                ])->columns(3),
+
+                // ── Tab Management ────────────────────────────────────────────
+                Tab::make('Management')->schema([
                     TextEntry::make('sale.name')
                         ->label('Sale')
                         ->placeholder('—'),
@@ -155,26 +175,6 @@ class ViewBooking extends ViewRecord
                         ->label('AdOps')
                         ->placeholder('—'),
 
-                    TextEntry::make('total_budget')
-                        ->label('Ngân sách')
-                        ->money(fn (Booking $record) => $record->currency ?? 'VND')
-                        ->weight('bold')
-                        ->placeholder('—'),
-
-                    // Bắt đầu + Kết thúc gom 1 cột
-                    TextEntry::make('start_date')
-                        ->label('Thời gian')
-                        ->html()
-                        ->getStateUsing(fn (Booking $record) =>
-                            '<div class="tabular-nums text-sm">' . ($record->start_date?->format('d/m/Y') ?? '—') . '</div>'
-                            . '<div class="text-gray-400 dark:text-gray-500 text-xs leading-none py-0.5">↓</div>'
-                            . '<div class="tabular-nums text-sm">' . ($record->end_date?->format('d/m/Y') ?? '—') . '</div>'
-                        ),
-
-                ])->columns(3),
-
-                // ── Tab Management ────────────────────────────────────────────
-                Tab::make('Management')->schema([
                     TextEntry::make('note')
                         ->label('Ghi chú')
                         ->placeholder('—')
