@@ -81,22 +81,22 @@ class PlanResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('plan_no')
-                    ->label('Mã Plan')
+                Tables\Columns\TextColumn::make('brief.campaign_name')
+                    ->label('Plan')
+                    ->description(fn (Plan $record) => $record->plan_no . ' · v' . $record->version)
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->url(fn (Plan $record) => static::getUrl('view', ['record' => $record])),
 
-                Tables\Columns\TextColumn::make('version')
-                    ->label('Ver.')
-                    ->prefix('v')
-                    ->alignCenter(),
-
-                Tables\Columns\TextColumn::make('brief.brief_no')
-                    ->label('Brief')
+                Tables\Columns\TextColumn::make('brief.customer.name')
+                    ->label('Khách hàng')
                     ->searchable()
-                    ->url(fn ($record) => BriefResource::getUrl('view', ['record' => $record->brief_id]))
-                    ->color('primary'),
+                    ->placeholder('—'),
+
+                Tables\Columns\TextColumn::make('brief.sale.name')
+                    ->label('Sale')
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('adops.name')
                     ->label('AdOps')
@@ -107,16 +107,6 @@ class PlanResource extends Resource
                     ->money('VND')
                     ->placeholder('—')
                     ->alignEnd(),
-
-                Tables\Columns\TextColumn::make('screen_count')
-                    ->label('Màn hình')
-                    ->alignCenter()
-                    ->placeholder('—'),
-
-                Tables\Columns\TextColumn::make('lineItems_count')
-                    ->label('Line items')
-                    ->counts('lineItems')
-                    ->alignCenter(),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->label('Trạng thái')
@@ -129,11 +119,13 @@ class PlanResource extends Resource
                     ->options(Plan::$statuses),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make()
-                    ->visible(fn (Plan $record) => in_array($record->status, ['draft', 're_plan'])
-                        && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
-                    ),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->visible(fn (Plan $record) => in_array($record->status, ['draft', 're_plan'])
+                            && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
+                        ),
+                ]),
             ])
             ->defaultSort('created_at', 'desc');
     }
