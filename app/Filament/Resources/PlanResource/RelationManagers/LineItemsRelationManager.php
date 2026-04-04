@@ -212,13 +212,13 @@ class LineItemsRelationManager extends RelationManager
 
                 Tables\Columns\TextColumn::make('unit_cost')
                     ->label('Đơn giá')
-                    ->money('VND')
+                    ->money(fn (PlanLineItem $record) => $record->plan?->brief?->currency ?? 'VND')
                     ->alignEnd()
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('line_budget')
                     ->label('Ngân sách')
-                    ->money('VND')
+                    ->money(fn (PlanLineItem $record) => $record->plan?->brief?->currency ?? 'VND')
                     ->alignEnd()
                     ->weight('bold'),
 

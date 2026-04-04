@@ -104,7 +104,7 @@ class PlanResource extends Resource
 
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Ngân sách')
-                    ->money('VND')
+                    ->money(fn (Plan $record) => $record->brief?->currency ?? 'VND')
                     ->placeholder('—')
                     ->alignEnd(),
 

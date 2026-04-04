@@ -257,7 +257,7 @@ class ViewPlan extends ViewRecord
 
                         TextEntry::make('budget')
                             ->label('Ngân sách kế hoạch')
-                            ->money('VND')
+                            ->money(fn ($record) => $record->brief?->currency ?? 'VND')
                             ->weight('bold')
                             ->placeholder('—'),
 
