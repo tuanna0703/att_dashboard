@@ -288,16 +288,18 @@ class BriefResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('brief_no')
-                    ->label('Mã Brief')
-                    ->searchable()
-                    ->sortable()
-                    ->weight('bold'),
-
                 Tables\Columns\TextColumn::make('campaign_name')
-                    ->label('Tên Campaign')
-                    ->searchable()
-                    ->limit(40),
+                    ->label('Brief')
+                    ->html()
+                    ->formatStateUsing(function (Brief $record) {
+                        return '<div class="font-semibold text-gray-950 dark:text-white">' . e($record->campaign_name) . '</div>'
+                            . '<div class="text-xs text-gray-400 mt-0.5">' . e($record->brief_no) . '</div>';
+                    })
+                    ->searchable(query: fn ($query, string $search) =>
+                        $query->where('brief_no', 'like', "%{$search}%")
+                            ->orWhere('campaign_name', 'like', "%{$search}%")
+                    )
+                    ->url(fn (Brief $record) => static::getUrl('view', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('customer.name')
                     ->label('Khách hàng')
@@ -314,20 +316,17 @@ class BriefResource extends Resource
 
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Ngân sách')
-                    ->formatStateUsing(fn ($state, $record) => $state
-                        ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->currency ?? 'VND')
-                        : '—')
-                    ->sortable(),
+                    ->money(fn (Brief $record) => $record->currency ?? 'VND')
+                    ->sortable()
+                    ->alignEnd()
+                    ->weight('bold')
+                    ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('revisions_count')
-                    ->label('Rev.')
-                    ->counts('revisions')
-                    ->alignCenter(),
-
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Trạng thái')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => Brief::$statuses[$state] ?? $state)
-                    ->colors(Brief::$statusColors),
+                    ->color(fn ($state) => Brief::$statusColors[$state] ?? 'gray'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
