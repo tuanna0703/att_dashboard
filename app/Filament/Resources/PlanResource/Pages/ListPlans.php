@@ -32,8 +32,9 @@ class ListPlans extends ListRecords
     protected function getTableQuery(): Builder
     {
         $expandedBriefs = $this->expandedBriefs;
+        $user           = auth()->user();
 
-        return Plan::query()
+        $query = Plan::query()
             ->selectRaw(
                 'plans.*, ' .
                 '(SELECT MAX(p2.version) FROM plans p2 ' .
@@ -55,5 +56,16 @@ class ListPlans extends ListRecords
                 '(SELECT MAX(p3.created_at) FROM plans p3 WHERE p3.brief_id = plans.brief_id) DESC'
             )
             ->orderByDesc('plans.version');
+
+        // Scope theo role: sale thấy plans của brief mình phụ trách,
+        // adops thấy plans mình được assign
+        if ($user->hasRole('sale')) {
+            $query->whereHas('brief', fn (Builder $q) => $q->where('sale_id', $user->id));
+        } elseif ($user->hasRole('adops')) {
+            $query->where('plans.adops_id', $user->id);
+        }
+        // CEO, COO và các role khác thấy tất cả
+
+        return $query;
     }
 }
