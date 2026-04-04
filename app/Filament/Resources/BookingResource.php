@@ -235,7 +235,9 @@ class BookingResource extends Resource
             ]);
         }
 
-        $booking->update(['contract_id' => $contract->id]);
+        // Use withoutEvents to avoid triggering ReadyToAirGate evaluation
+        // against tables that may not exist; gate re-evaluates when contract status changes
+        $booking->withoutEvents(fn () => $booking->update(['contract_id' => $contract->id]));
 
         Notification::make()
             ->title("Đã tạo hợp đồng {$contract->contract_code}")
