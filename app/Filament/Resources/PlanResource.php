@@ -2,15 +2,13 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\PlanResource\Pages;
 use App\Filament\Resources\PlanResource\RelationManagers;
 use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Plan;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -76,66 +74,6 @@ class PlanResource extends Resource
                     ->rows(3)
                     ->columnSpanFull(),
             ])->columns(2),
-        ]);
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist->schema([
-            Section::make('Thông tin kế hoạch')->schema([
-                TextEntry::make('plan_no')
-                    ->label('Mã Plan')
-                    ->weight('bold')
-                    ->copyable(),
-
-                TextEntry::make('status')
-                    ->label('Trạng thái')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => Plan::$statuses[$state] ?? $state)
-                    ->color(fn ($state) => Plan::$statusColors[$state] ?? 'gray'),
-
-                TextEntry::make('brief.brief_no')
-                    ->label('Brief')
-                    ->url(fn ($record) => BriefResource::getUrl('view', ['record' => $record->brief_id]))
-                    ->color('primary'),
-
-                TextEntry::make('adops.name')
-                    ->label('AdOps')
-                    ->placeholder('—'),
-
-                TextEntry::make('budget')
-                    ->label('Ngân sách')
-                    ->money('VND')
-                    ->placeholder('—')
-                    ->weight('bold'),
-
-                TextEntry::make('screen_count')
-                    ->label('Số line items')
-                    ->placeholder('—'),
-
-                TextEntry::make('note')
-                    ->label('Ghi chú')
-                    ->placeholder('—')
-                    ->columnSpanFull(),
-            ])->columns(4),
-
-            Section::make('Phản hồi của Sale')->schema([
-                TextEntry::make('sale_comment')
-                    ->label('Comment')
-                    ->placeholder('Chưa có phản hồi')
-                    ->columnSpanFull(),
-
-                TextEntry::make('respondedBy.name')
-                    ->label('Người phản hồi')
-                    ->placeholder('—'),
-
-                TextEntry::make('responded_at')
-                    ->label('Thời gian')
-                    ->dateTime('d/m/Y H:i')
-                    ->placeholder('—'),
-            ])->columns(2)
-              ->collapsible()
-              ->collapsed(fn ($record) => ! $record->sale_comment),
         ]);
     }
 
