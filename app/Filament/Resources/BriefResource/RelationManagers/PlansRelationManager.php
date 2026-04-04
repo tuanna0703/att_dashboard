@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources\BriefResource\RelationManagers;
 
+use App\Events\Plan\PlanAccepted;
+use App\Events\Plan\PlanCreated;
+use App\Events\Plan\PlanRejected;
+use App\Events\Plan\PlanRePlanRequested;
+use App\Events\Plan\PlanSubmitted;
 use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\PlanResource;
 use App\Models\Plan;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Support\RawJs;
@@ -82,7 +86,7 @@ class PlansRelationManager extends RelationManager
                     ->label('CPM (VND)')
                     ->prefix('₫')
                     ->numeric()
-                    ->default($brief->cpm),
+                    ->default($brief->cpm ?? null),
 
                 Forms\Components\TextInput::make('screen_count')
                     ->label('Số màn hình')
@@ -129,8 +133,7 @@ class PlansRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('plan_no')
                     ->label('Mã Plan')
-                    ->weight('bold')
-                    ->prefix(''),
+                    ->weight('bold'),
 
                 Tables\Columns\TextColumn::make('version')
                     ->label('Ver.')
@@ -180,13 +183,23 @@ class PlansRelationManager extends RelationManager
                     ->placeholder('—'),
             ])
             ->headerActions([
-                // AdOps tạo plan mới khi brief đang sent_to_adops hoặc cần re-plan
                 Tables\Actions\CreateAction::make()
                     ->label('+ Tạo Plan')
                     ->mutateFormDataUsing(function (array $data): array {
                         $data['created_by'] = auth()->id();
                         $data['status']     = 'draft';
                         return $data;
+                    })
+                    ->after(function (Plan $record) {
+                        event(new PlanCreated(
+                            subject: $record,
+                            causer:  auth()->user(),
+                            context: [
+                                'plan_no' => $record->plan_no,
+                                'version' => $record->version,
+                            ]
+                        ));
+                        Notification::make()->title('Plan đã được tạo')->success()->send();
                     })
                     ->visible(fn () => auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         && in_array($this->getOwnerRecord()->status, [
@@ -289,7 +302,7 @@ class PlansRelationManager extends RelationManager
                             'note'          => $record->note,
                         ])
                         ->action(function (Plan $record, array $data) {
-                            Plan::create([
+                            $newPlan = Plan::create([
                                 'brief_id'      => $record->brief_id,
                                 'campaign_name' => $data['campaign_name'],
                                 'start_date'    => $data['start_date'] ?? null,
@@ -304,7 +317,19 @@ class PlansRelationManager extends RelationManager
                                 'created_by'    => auth()->id(),
                             ]);
 
-                            Notification::make()->title('Đã tạo Plan điều chỉnh — tiếp tục chỉnh sửa và gửi duyệt')->success()->send();
+                            event(new PlanCreated(
+                                subject: $newPlan,
+                                causer:  auth()->user(),
+                                context: [
+                                    'plan_no' => $newPlan->plan_no,
+                                    'version' => $newPlan->version,
+                                ]
+                            ));
+
+                            Notification::make()
+                                ->title('Đã tạo Plan điều chỉnh — tiếp tục chỉnh sửa và gửi duyệt')
+                                ->success()
+                                ->send();
                         }),
 
                     // ── AdOps: Gửi plan cho Sale duyệt ──────────────────────
@@ -312,28 +337,23 @@ class PlansRelationManager extends RelationManager
                         ->label('Gửi duyệt')
                         ->icon('heroicon-o-paper-airplane')
                         ->color('info')
-                        ->visible(fn (Plan $record) => $record->status === 'draft' && $record->created_by === auth()->id())
+                        ->visible(fn (Plan $record) => $record->status === 'draft'
+                            && $record->created_by === auth()->id()
+                        )
                         ->requiresConfirmation()
                         ->modalHeading('Xác nhận gửi Plan cho Sale review?')
                         ->action(function (Plan $record) {
                             $record->update(['status' => 'submitted']);
                             $record->brief->update(['status' => 'planning_ready']);
 
-                            // Notify người tạo brief (Sale)
-                            $saleUser = $record->brief->sale;
-                            if ($saleUser) {
-                                Notification::make()
-                                    ->title('Plan mới cho Brief của bạn')
-                                    ->body("{$record->plan_no} (v{$record->version}) — {$record->brief->brief_no}: {$record->campaign_name}")
-                                    ->icon('heroicon-o-clipboard-document-check')
-                                    ->iconColor('info')
-                                    ->actions([
-                                        NotifAction::make('view')
-                                            ->label('Xem Brief')
-                                            ->url(BriefResource::getUrl('view', ['record' => $record->brief_id])),
-                                    ])
-                                    ->sendToDatabase($saleUser);
-                            }
+                            event(new PlanSubmitted(
+                                subject: $record,
+                                causer:  auth()->user(),
+                                context: [
+                                    'plan_no' => $record->plan_no,
+                                    'version' => $record->version,
+                                ]
+                            ));
 
                             Notification::make()->title('Đã gửi Plan cho Sale review')->success()->send();
                         }),
@@ -349,9 +369,9 @@ class PlansRelationManager extends RelationManager
                         ->modalDescription('Brief sẽ chuyển sang trạng thái "Confirmed" và có thể tạo Booking.')
                         ->action(function (Plan $record) {
                             $record->update([
-                                'status'        => 'accepted',
-                                'responded_by'  => auth()->id(),
-                                'responded_at'  => now(),
+                                'status'       => 'accepted',
+                                'responded_by' => auth()->id(),
+                                'responded_at' => now(),
                             ]);
 
                             // Các plan khác của brief này → superseded
@@ -362,21 +382,14 @@ class PlansRelationManager extends RelationManager
 
                             $record->brief->update(['status' => 'confirmed']);
 
-                            // Notify AdOps
-                            $adops = $record->createdBy;
-                            if ($adops) {
-                                Notification::make()
-                                    ->title('Plan của bạn đã được chấp nhận!')
-                                    ->body("{$record->plan_no} — {$record->campaign_name}")
-                                    ->icon('heroicon-o-check-badge')
-                                    ->iconColor('success')
-                                    ->actions([
-                                        NotifAction::make('view')
-                                            ->label('Xem Brief')
-                                            ->url(BriefResource::getUrl('view', ['record' => $record->brief_id])),
-                                    ])
-                                    ->sendToDatabase($adops);
-                            }
+                            event(new PlanAccepted(
+                                subject: $record,
+                                causer:  auth()->user(),
+                                context: [
+                                    'plan_no' => $record->plan_no,
+                                    'version' => $record->version,
+                                ]
+                            ));
 
                             Notification::make()->title('Plan được chấp nhận — Brief đã confirmed')->success()->send();
                         }),
@@ -405,21 +418,15 @@ class PlansRelationManager extends RelationManager
 
                             $record->brief->update(['status' => 'sent_to_adops']);
 
-                            // Notify AdOps
-                            $adops = $record->createdBy;
-                            if ($adops) {
-                                Notification::make()
-                                    ->title('Plan cần điều chỉnh')
-                                    ->body("{$record->plan_no}: {$data['sale_comment']}")
-                                    ->icon('heroicon-o-arrow-path')
-                                    ->iconColor('warning')
-                                    ->actions([
-                                        NotifAction::make('view')
-                                            ->label('Xem Brief')
-                                            ->url(BriefResource::getUrl('view', ['record' => $record->brief_id])),
-                                    ])
-                                    ->sendToDatabase($adops);
-                            }
+                            event(new PlanRePlanRequested(
+                                subject: $record,
+                                causer:  auth()->user(),
+                                context: [
+                                    'plan_no' => $record->plan_no,
+                                    'version' => $record->version,
+                                    'comment' => $data['sale_comment'],
+                                ]
+                            ));
 
                             Notification::make()->title('Đã gửi yêu cầu điều chỉnh cho AdOps')->warning()->send();
                         }),
@@ -448,21 +455,15 @@ class PlansRelationManager extends RelationManager
 
                             $record->brief->update(['status' => 'rejected']);
 
-                            // Notify AdOps
-                            $adops = $record->createdBy;
-                            if ($adops) {
-                                Notification::make()
-                                    ->title('Plan bị từ chối')
-                                    ->body("{$record->plan_no}: {$data['sale_comment']}")
-                                    ->icon('heroicon-o-x-circle')
-                                    ->iconColor('danger')
-                                    ->actions([
-                                        NotifAction::make('view')
-                                            ->label('Xem Brief')
-                                            ->url(BriefResource::getUrl('view', ['record' => $record->brief_id])),
-                                    ])
-                                    ->sendToDatabase($adops);
-                            }
+                            event(new PlanRejected(
+                                subject: $record,
+                                causer:  auth()->user(),
+                                context: [
+                                    'plan_no' => $record->plan_no,
+                                    'version' => $record->version,
+                                    'comment' => $data['sale_comment'],
+                                ]
+                            ));
 
                             Notification::make()->title('Brief đã bị từ chối và đóng lại')->danger()->send();
                         }),

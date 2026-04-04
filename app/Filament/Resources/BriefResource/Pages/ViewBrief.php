@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\BriefResource\Pages;
 
+use App\Events\Brief\BriefSentToAdops;
 use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\BriefResource\RelationManagers\BriefLineItemsRelationManager;
 use App\Models\Brief;
@@ -15,7 +16,6 @@ use Filament\Infolists\Components\Tabs\Tab;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\View as InfolisView;
 use Filament\Infolists\Infolist;
-use Filament\Notifications\Actions\Action as NotifAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\Storage;
@@ -64,23 +64,19 @@ class ViewBrief extends ViewRecord
                             'status'   => 'sent_to_adops',
                             'adops_id' => $data['adops_id'],
                         ]);
-                        Notification::make()->title('Đã gửi Brief cho AdOps')->success()->send();
 
                         $adopsUser = User::find($data['adops_id']);
-                        if ($adopsUser) {
-                            Notification::make()
-                                ->title('Brief mới được assign cho bạn')
-                                ->body("{$this->record->brief_no} — {$this->record->campaign_name}")
-                                ->icon('heroicon-o-document-magnifying-glass')
-                                ->iconColor('info')
-                                ->actions([
-                                    NotifAction::make('view')
-                                        ->label('Xem Brief')
-                                        ->url(BriefResource::getUrl('view', ['record' => $this->record])),
-                                ])
-                                ->sendToDatabase($adopsUser);
-                        }
 
+                        event(new BriefSentToAdops(
+                            subject: $this->record,
+                            causer:  auth()->user(),
+                            context: [
+                                'adops_id'   => $data['adops_id'],
+                                'adops_name' => $adopsUser?->name ?? '—',
+                            ]
+                        ));
+
+                        Notification::make()->title('Đã gửi Brief cho AdOps')->success()->send();
                         $this->refreshFormData(['status', 'adops_id']);
                     }),
 

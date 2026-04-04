@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"getRelationManagers\\\\|RelationManagers\\\\\\\\\" \"/c/Code Project/att_dashboard/app/Filament/Resources/BriefResource.php\")"
+    ]
+  }
+}

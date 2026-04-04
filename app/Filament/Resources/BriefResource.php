@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BriefResource\Pages;
 use App\Filament\Resources\BriefResource\RelationManagers;
+use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Brief;
 use App\Models\AdNetwork;
 use App\Models\BriefLineItem;
@@ -446,6 +447,7 @@ class BriefResource extends Resource
         return [
             RelationManagers\PlansRelationManager::class,
             RelationManagers\RevisionsRelationManager::class,
+            ActivityLogRelationManager::class,
         ];
     }
 

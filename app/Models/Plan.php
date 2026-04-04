@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Plan extends Model
@@ -99,6 +100,11 @@ class Plan extends Model
     public function lineItems(): HasMany
     {
         return $this->hasMany(PlanLineItem::class)->orderBy('sort_order');
+    }
+
+    public function activityLogs(): MorphMany
+    {
+        return $this->morphMany(ActivityLog::class, 'subject')->orderByDesc('created_at');
     }
 
     // ─── Computed totals ──────────────────────────────────────────────────────

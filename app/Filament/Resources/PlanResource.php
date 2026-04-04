@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PlanResource\Pages;
 use App\Filament\Resources\PlanResource\RelationManagers;
+use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Plan;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -249,6 +250,7 @@ class PlanResource extends Resource
     {
         return [
             RelationManagers\LineItemsRelationManager::class,
+            ActivityLogRelationManager::class,
         ];
     }
 
