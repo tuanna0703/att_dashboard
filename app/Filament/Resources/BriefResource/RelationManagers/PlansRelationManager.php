@@ -3,13 +3,11 @@
 namespace App\Filament\Resources\BriefResource\RelationManagers;
 
 use App\Events\Plan\PlanAccepted;
-use App\Events\Plan\PlanCreated;
 use App\Events\Plan\PlanRejected;
 use App\Events\Plan\PlanRePlanRequested;
 use App\Events\Plan\PlanSubmitted;
 use App\Filament\Resources\PlanResource;
 use App\Models\Plan;
-use App\Models\PlanLineItem;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -123,24 +121,11 @@ class PlansRelationManager extends RelationManager
                     ->placeholder('—'),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                Tables\Actions\Action::make('create_plan')
                     ->label('+ Tạo Plan')
-                    ->mutateFormDataUsing(function (array $data): array {
-                        $data['adops_id'] = auth()->id();
-                        $data['status']   = 'draft';
-                        return $data;
-                    })
-                    ->after(function (Plan $record) {
-                        event(new PlanCreated(
-                            subject: $record,
-                            causer:  auth()->user(),
-                            context: [
-                                'plan_no' => $record->plan_no,
-                                'version' => $record->version,
-                            ]
-                        ));
-                        Notification::make()->title('Plan đã được tạo — thêm line items để hoàn thiện')->success()->send();
-                    })
+                    ->icon('heroicon-o-plus-circle')
+                    ->color('primary')
+                    ->url(fn () => PlanResource::getUrl('create', ['brief_id' => $this->getOwnerRecord()->id]))
                     ->visible(fn () => auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         && in_array($this->getOwnerRecord()->status, [
                             'sent_to_adops', 'planning_ready', 'customer_feedback',
@@ -160,7 +145,7 @@ class PlansRelationManager extends RelationManager
                             && $record->adops_id === auth()->id()
                         ),
 
-                    // ── AdOps: Tạo plan điều chỉnh từ plan bị re_plan ────────
+                    // ── AdOps: Tạo plan điều chỉnh (đi đến trang tạo plan với data từ plan cũ) ──
                     Tables\Actions\Action::make('create_revision')
                         ->label('Tạo Plan điều chỉnh')
                         ->icon('heroicon-o-arrow-path')
@@ -168,85 +153,10 @@ class PlansRelationManager extends RelationManager
                         ->visible(fn (Plan $record) => $record->status === 're_plan'
                             && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         )
-                        ->form([
-                            Forms\Components\Textarea::make('note')
-                                ->label('Ghi chú / Điều chỉnh so với plan cũ')
-                                ->rows(4)
-                                ->columnSpanFull(),
-
-                            Forms\Components\FileUpload::make('file_path')
-                                ->label('File kế hoạch mới')
-                                ->directory('plans')
-                                ->acceptedFileTypes([
-                                    'application/pdf', 'image/*',
-                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                    'application/vnd.ms-excel',
-                                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                    'application/msword',
-                                ])
-                                ->columnSpanFull(),
-
-                            Forms\Components\Toggle::make('copy_line_items')
-                                ->label('Sao chép line items từ plan cũ')
-                                ->default(true)
-                                ->helperText('Sao chép các line items chưa bị từ chối, reset về trạng thái Chờ xác nhận'),
-                        ])
-                        ->modalHeading('Tạo Plan điều chỉnh')
-                        ->modalDescription(fn (Plan $record) => "Tạo phiên bản mới dựa trên Plan {$record->plan_no}. Lý do điều chỉnh: {$record->sale_comment}")
-                        ->fillForm(fn (Plan $record) => [
-                            'note'             => $record->note,
-                            'copy_line_items'  => true,
-                        ])
-                        ->action(function (Plan $record, array $data) {
-                            $newPlan = Plan::create([
-                                'brief_id'  => $record->brief_id,
-                                'note'      => $data['note'] ?? null,
-                                'file_path' => $data['file_path'] ?? null,
-                                'status'    => 'draft',
-                                'adops_id'  => auth()->id(),
-                            ]);
-
-                            // Copy non-rejected line items and reset their status
-                            if (! empty($data['copy_line_items'])) {
-                                $record->lineItems()
-                                    ->where('status', '!=', 'rejected')
-                                    ->get()
-                                    ->each(function (PlanLineItem $item) use ($newPlan) {
-                                        PlanLineItem::create([
-                                            'plan_id'            => $newPlan->id,
-                                            'brief_line_item_id' => $item->brief_line_item_id,
-                                            'created_by'         => $item->created_by,
-                                            'source'             => $item->source,
-                                            'format'             => $item->format,
-                                            'targeting'          => $item->targeting,
-                                            'start_date'         => $item->start_date,
-                                            'end_date'           => $item->end_date,
-                                            'unit'               => $item->unit,
-                                            'guaranteed_units'   => $item->guaranteed_units,
-                                            'unit_cost'          => $item->unit_cost,
-                                            'line_budget'        => $item->line_budget,
-                                            'est_impression'     => $item->est_impression,
-                                            'status'             => 'pending',
-                                            'notes'              => $item->notes,
-                                            'sort_order'         => $item->sort_order,
-                                        ]);
-                                    });
-                            }
-
-                            event(new PlanCreated(
-                                subject: $newPlan,
-                                causer:  auth()->user(),
-                                context: [
-                                    'plan_no' => $newPlan->plan_no,
-                                    'version' => $newPlan->version,
-                                ]
-                            ));
-
-                            Notification::make()
-                                ->title('Đã tạo Plan điều chỉnh — tiếp tục chỉnh sửa và gửi duyệt')
-                                ->success()
-                                ->send();
-                        }),
+                        ->url(fn (Plan $record) => PlanResource::getUrl('create', [
+                            'brief_id'     => $record->brief_id,
+                            'from_plan_id' => $record->id,
+                        ])),
 
                     // ── AdOps: Gửi plan cho Sale duyệt ──────────────────────
                     Tables\Actions\Action::make('submit')

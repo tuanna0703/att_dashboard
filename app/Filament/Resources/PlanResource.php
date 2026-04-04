@@ -212,6 +212,7 @@ class PlanResource extends Resource
     {
         return [
             'index'  => Pages\ListPlans::route('/'),
+            'create' => Pages\CreatePlan::route('/create'),
             'view'   => Pages\ViewPlan::route('/{record}'),
             'edit'   => Pages\EditPlan::route('/{record}/edit'),
         ];
