@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Shared;
 
 use App\Models\ActivityLog;
+use App\Models\Booking;
 use App\Models\Brief;
 use App\Models\Plan;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -51,6 +52,9 @@ class ActivityLogRelationManager extends RelationManager
             });
         } elseif ($owner instanceof Plan) {
             $query->where('subject_type', Plan::class)
+                  ->where('subject_id', $owner->id);
+        } elseif ($owner instanceof Booking) {
+            $query->where('subject_type', Booking::class)
                   ->where('subject_id', $owner->id);
         }
 

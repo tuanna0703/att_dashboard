@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BookingResource\Pages;
 use App\Filament\Resources\BookingResource\RelationManagers;
 use App\Filament\Resources\PlanResource;
+use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Booking;
 use App\Models\Contract;
 use App\Models\Customer;
@@ -12,9 +13,6 @@ use App\Models\CustomerContact;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Infolist;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
@@ -199,52 +197,11 @@ class BookingResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist->schema([
-            Section::make('Thông tin Booking')->schema([
-                TextEntry::make('booking_no')->label('Mã Booking')->weight('bold')->copyable(),
-                TextEntry::make('status')
-                    ->label('Trạng thái')
-                    ->badge()
-                    ->formatStateUsing(fn ($state) => Booking::$statuses[$state] ?? $state)
-                    ->color(fn ($state) => Booking::$statusColors[$state] ?? 'gray'),
-                TextEntry::make('campaign_name')->label('Campaign')->columnSpan(2),
-                TextEntry::make('customer.name')->label('Khách hàng'),
-                TextEntry::make('sale.name')->label('Sale'),
-                TextEntry::make('adops.name')->label('AdOps')->placeholder('—'),
-                TextEntry::make('start_date')->label('Bắt đầu')->date('d/m/Y'),
-                TextEntry::make('end_date')->label('Kết thúc')->date('d/m/Y'),
-                TextEntry::make('total_budget')->label('Ngân sách')->money(fn (Booking $record) => $record->currency ?? 'VND')->placeholder('—'),
-                TextEntry::make('contract.contract_code')
-                    ->label('Hợp đồng')
-                    ->placeholder('Chưa có hợp đồng')
-                    ->badge()
-                    ->color('success'),
-                TextEntry::make('brief.brief_no')->label('Brief gốc')->placeholder('—'),
-                TextEntry::make('note')->label('Ghi chú')->placeholder('—')->columnSpanFull(),
-            ])->columns(4),
-
-            Section::make('Plan gốc')->schema([
-                TextEntry::make('plan.plan_no')
-                    ->label('Mã Plan')
-                    ->placeholder('—')
-                    ->url(fn (Booking $record) => $record->plan_id
-                        ? PlanResource::getUrl('view', ['record' => $record->plan_id])
-                        : null
-                    )
-                    ->color('primary'),
-                TextEntry::make('plan.version')
-                    ->label('Phiên bản')
-                    ->formatStateUsing(fn ($state) => $state ? 'v' . $state : '—'),
-            ])->columns(2),
-        ]);
-    }
-
-    public static function getRelationManagers(): array
+public static function getRelationManagers(): array
     {
         return [
-            RelationManagers\MediaBuyingOrdersRelationManager::class,
+            RelationManagers\LineItemsRelationManager::class,
+            ActivityLogRelationManager::class,
         ];
     }
 
