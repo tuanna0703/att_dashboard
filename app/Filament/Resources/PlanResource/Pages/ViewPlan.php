@@ -30,10 +30,7 @@ class ViewPlan extends ViewRecord
 
     public function getRelationManagers(): array
     {
-        return [
-            LineItemsRelationManager::class,
-            ...PlanResource::getRelationManagers(),
-        ];
+        return PlanResource::getRelationManagers();
     }
 
     // ─── Title ────────────────────────────────────────────────────────────────

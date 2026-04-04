@@ -180,57 +180,55 @@ class LineItemsRelationManager extends RelationManager
             ->reorderable('sort_order')
             ->defaultSort('sort_order')
             ->columns([
-                Tables\Columns\BadgeColumn::make('source')
-                    ->label('Nguồn')
-                    ->formatStateUsing(fn ($state) => PlanLineItem::$sourceLabels[$state] ?? $state)
-                    ->colors(PlanLineItem::$sourceColors),
-
+                // ── Network / Format ─────────────────────────────────────────
                 Tables\Columns\TextColumn::make('format')
-                    ->label('Format')
+                    ->label('Network / Format')
                     ->weight('bold')
-                    ->description(fn ($record) => AdNetwork::whereIn('id', $record->targeting ?? [])
-                        ->orderBy('name')->pluck('name')->implode(', '))
+                    ->description(fn (PlanLineItem $record) =>
+                        AdNetwork::whereIn('id', $record->targeting ?? [])
+                            ->orderBy('name')->pluck('name')->implode(', ') ?: '—'
+                    )
                     ->searchable(),
 
+                // ── Date range (stacked: từ ngày ↓ đến ngày) ─────────────────
                 Tables\Columns\TextColumn::make('start_date')
-                    ->label('Từ ngày')
-                    ->date('d/m/Y'),
+                    ->label('Thời gian')
+                    ->html()
+                    ->getStateUsing(fn (PlanLineItem $record) =>
+                        '<div class="tabular-nums text-sm">'
+                            . ($record->start_date?->format('d/m/Y') ?? '—')
+                        . '</div>'
+                        . '<div class="text-gray-400 dark:text-gray-500 text-xs text-center leading-none py-0.5">↓</div>'
+                        . '<div class="tabular-nums text-sm">'
+                            . ($record->end_date?->format('d/m/Y') ?? '—')
+                        . '</div>'
+                    ),
 
-                Tables\Columns\TextColumn::make('end_date')
-                    ->label('Đến ngày')
-                    ->date('d/m/Y'),
-
-                Tables\Columns\TextColumn::make('unit')
-                    ->label('Đơn vị')
-                    ->badge()
-                    ->color('gray'),
-
+                // ── KPI ───────────────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('guaranteed_units')
                     ->label('KPI')
                     ->numeric(decimalPlaces: 0, thousandsSeparator: '.')
                     ->alignEnd(),
 
-                Tables\Columns\TextColumn::make('unit_cost')
-                    ->label('Đơn giá')
-                    ->money(fn (PlanLineItem $record) => $record->plan?->brief?->currency ?? 'VND')
-                    ->alignEnd()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                // ── Đơn vị ───────────────────────────────────────────────────
+                Tables\Columns\TextColumn::make('unit')
+                    ->label('Đơn vị')
+                    ->badge()
+                    ->color('gray'),
 
+                // ── Ngân sách ─────────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('line_budget')
                     ->label('Ngân sách')
                     ->money(fn (PlanLineItem $record) => $record->plan?->brief?->currency ?? 'VND')
                     ->alignEnd()
                     ->weight('bold'),
 
-                Tables\Columns\TextColumn::make('createdBy.name')
-                    ->label('Người tạo')
-                    ->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
-
-                Tables\Columns\BadgeColumn::make('status')
+                // ── Trạng thái ────────────────────────────────────────────────
+                Tables\Columns\TextColumn::make('status')
                     ->label('Trạng thái')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => PlanLineItem::$statuses[$state] ?? $state)
-                    ->colors(PlanLineItem::$statusColors),
+                    ->color(fn ($state) => PlanLineItem::$statusColors[$state] ?? 'gray'),
             ])
             ->headerActions([
                 Tables\Actions\CreateAction::make()
