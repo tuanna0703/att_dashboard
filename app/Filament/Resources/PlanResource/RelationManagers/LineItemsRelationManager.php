@@ -188,13 +188,13 @@ class LineItemsRelationManager extends RelationManager
                         $networks = AdNetwork::whereIn('id', $record->targeting ?? [])
                             ->orderBy('name')->pluck('name')->implode(', ');
                         $top = $networks
-                            ? '<div class="font-semibold text-gray-950 dark:text-white truncate">' . e($networks) . '</div>'
+                            ? '<div class="font-semibold text-gray-950 dark:text-white" style="white-space:normal;word-break:break-word;">' . e($networks) . '</div>'
                             : '';
                         $bottom = '<div class="text-sm text-gray-500 dark:text-gray-400">' . e($record->format) . '</div>';
-                        return $top . $bottom;
+                        return '<div style="max-width:320px;min-width:0;">' . $top . $bottom . '</div>';
                     })())
                     ->searchable(false)
-                    ->width('40%'),
+                    ->wrap(),
 
                 // ── Date range (stacked: từ ngày ↓ đến ngày) ─────────────────
                 Tables\Columns\TextColumn::make('start_date')
