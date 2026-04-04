@@ -8,12 +8,12 @@ use App\Events\Plan\PlanRePlanRequested;
 use App\Events\Plan\PlanSubmitted;
 use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\PlanResource;
+use App\Filament\Resources\PlanResource\RelationManagers\LineItemsRelationManager;
 use App\Models\Plan;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Infolists\Components\Actions as InfolistActions;
 use Filament\Infolists\Components\Actions\Action as InfolistAction;
-use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\Tabs;
 use Filament\Infolists\Components\Tabs\Tab;
 use Filament\Infolists\Components\TextEntry;
@@ -25,6 +25,16 @@ use Illuminate\Support\Facades\Storage;
 class ViewPlan extends ViewRecord
 {
     protected static string $resource = PlanResource::class;
+
+    // ─── Relation managers ───────────────────────────────────────────────────
+
+    public function getRelationManagers(): array
+    {
+        return [
+            LineItemsRelationManager::class,
+            ...PlanResource::getRelationManagers(),
+        ];
+    }
 
     // ─── Title ────────────────────────────────────────────────────────────────
 
