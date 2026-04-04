@@ -12,6 +12,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class PlanResource extends Resource
 {
@@ -81,12 +82,32 @@ class PlanResource extends Resource
     {
         return $table
             ->columns([
+                // ── Plan: tree-aware first column ─────────────────────────────
                 Tables\Columns\TextColumn::make('brief.campaign_name')
                     ->label('Plan')
-                    ->description(fn (Plan $record) => $record->plan_no . ' · v' . $record->version)
-                    ->searchable()
-                    ->sortable()
-                    ->weight('bold')
+                    ->html()
+                    ->formatStateUsing(function (Plan $record) {
+                        $isLatest = (int) $record->version === (int) ($record->max_version ?? $record->version);
+
+                        if ($isLatest) {
+                            return '<div class="font-semibold text-gray-950 dark:text-white">'
+                                . e($record->brief?->campaign_name)
+                                . '</div>'
+                                . '<div class="text-xs text-gray-400 mt-0.5">'
+                                . e($record->plan_no) . ' · v' . $record->version
+                                . '</div>';
+                        }
+
+                        // Older version row — indented child style
+                        return '<div class="flex items-center gap-2 pl-5 text-gray-500 dark:text-gray-400 text-sm">'
+                            . '<span class="font-mono leading-none">↳</span>'
+                            . '<span>' . e($record->plan_no) . ' · v' . $record->version . '</span>'
+                            . '</div>';
+                    })
+                    ->searchable(true, fn (Builder $query, string $search) =>
+                        $query->where('plan_no', 'like', "%{$search}%")
+                            ->orWhereHas('brief', fn ($q) => $q->where('campaign_name', 'like', "%{$search}%"))
+                    )
                     ->url(fn (Plan $record) => static::getUrl('view', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('brief.customer.name')
@@ -113,12 +134,42 @@ class PlanResource extends Resource
                     ->formatStateUsing(fn ($state) => Plan::$statuses[$state] ?? $state)
                     ->colors(Plan::$statusColors),
             ])
+            // Mute older-version rows visually
+            ->recordClasses(fn (Plan $record) =>
+                (int) $record->version === (int) ($record->max_version ?? $record->version)
+                    ? null
+                    : 'opacity-60 bg-gray-50 dark:bg-white/5'
+            )
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Trạng thái')
                     ->options(Plan::$statuses),
             ])
             ->actions([
+                // ── Expand / collapse older versions ──────────────────────────
+                Tables\Actions\Action::make('toggle_versions')
+                    ->iconButton()
+                    ->icon(fn (Plan $record, \Livewire\Component $livewire) =>
+                        in_array($record->brief_id, $livewire->expandedBriefs ?? [])
+                            ? 'heroicon-s-chevron-up'
+                            : 'heroicon-s-chevron-down'
+                    )
+                    ->badge(fn (Plan $record) => (int) ($record->max_version ?? 1))
+                    ->badgeColor('gray')
+                    ->color('gray')
+                    ->tooltip(fn (Plan $record, \Livewire\Component $livewire) =>
+                        in_array($record->brief_id, $livewire->expandedBriefs ?? [])
+                            ? 'Thu gọn'
+                            : 'Xem ' . (int) $record->max_version . ' phiên bản'
+                    )
+                    ->visible(fn (Plan $record) =>
+                        (int) $record->version === (int) ($record->max_version ?? $record->version)
+                        && (int) ($record->max_version ?? 1) > 1
+                    )
+                    ->action(fn (Plan $record, \Livewire\Component $livewire) =>
+                        $livewire->toggleBriefExpansion($record->brief_id)
+                    ),
+
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make()
@@ -126,8 +177,8 @@ class PlanResource extends Resource
                             && auth()->user()->hasAnyRole(['adops', 'ceo', 'coo'])
                         ),
                 ]),
-            ])
-            ->defaultSort('created_at', 'desc');
+            ]);
+        // Note: no ->defaultSort() — ordering is handled in ListPlans::getTableQuery()
     }
 
     public static function getRelationManagers(): array
