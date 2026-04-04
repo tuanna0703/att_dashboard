@@ -256,10 +256,6 @@ class ViewPlan extends ViewRecord
                             ->weight('bold')
                             ->placeholder('—'),
 
-                        TextEntry::make('screen_count')
-                            ->label('Số line items')
-                            ->placeholder('—'),
-
                         TextEntry::make('start_date')
                             ->label('Ngày bắt đầu')
                             ->getStateUsing(fn ($record) => $record->lineItems->min('start_date'))

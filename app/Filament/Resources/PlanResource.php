@@ -129,10 +129,11 @@ class PlanResource extends Resource
                     ->placeholder('—')
                     ->alignEnd(),
 
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Trạng thái')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => Plan::$statuses[$state] ?? $state)
-                    ->colors(Plan::$statusColors),
+                    ->color(fn ($state) => Plan::$statusColors[$state] ?? 'gray'),
             ])
             // Mute older-version rows visually
             ->recordClasses(fn (Plan $record) =>
