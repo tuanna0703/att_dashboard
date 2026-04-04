@@ -5,6 +5,7 @@ namespace App\Filament\Resources\BookingResource\Pages;
 use App\Filament\Resources\BookingResource;
 use App\Filament\Resources\BookingResource\RelationManagers\LineItemsRelationManager;
 use App\Filament\Resources\BriefResource;
+use App\Filament\Resources\ContractResource;
 use App\Filament\Resources\PlanResource;
 use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Booking;
@@ -51,14 +52,13 @@ class ViewBooking extends ViewRecord
                     ->icon('heroicon-o-document-plus')
                     ->color('primary')
                     ->visible(fn () => is_null($this->record->contract_id))
-                    ->url(fn () => \App\Filament\Resources\ContractResource::getUrl('create', [
-                        'booking_id'    => $this->record->id,
-                        'customer_id'   => $this->record->customer_id,
-                        'campaign_name' => $this->record->campaign_name,
-                        'start_date'    => $this->record->start_date?->format('Y-m-d'),
-                        'end_date'      => $this->record->end_date?->format('Y-m-d'),
-                        'total_value'   => $this->record->total_budget,
-                    ])),
+                    ->requiresConfirmation()
+                    ->modalHeading('Tạo hợp đồng từ Booking này?')
+                    ->modalDescription('Hệ thống sẽ tạo hợp đồng quảng cáo với đầy đủ hạng mục từ line items của Booking.')
+                    ->action(function () {
+                        $contract = BookingResource::createContractFromBooking($this->record);
+                        $this->redirect(ContractResource::getUrl('edit', ['record' => $contract]));
+                    }),
 
                 Actions\Action::make('mark_active')
                     ->label('Bắt đầu chạy')

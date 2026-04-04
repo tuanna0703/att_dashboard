@@ -4,10 +4,12 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BookingResource\Pages;
 use App\Filament\Resources\BookingResource\RelationManagers;
+use App\Filament\Resources\ContractResource;
 use App\Filament\Resources\PlanResource;
 use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Booking;
 use App\Models\Contract;
+use App\Models\ContractLine;
 use App\Models\Customer;
 use App\Models\CustomerContact;
 use App\Models\User;
@@ -149,14 +151,12 @@ class BookingResource extends Resource
                         ->icon('heroicon-o-document-plus')
                         ->color('primary')
                         ->visible(fn (Booking $record) => is_null($record->contract_id))
-                        ->url(fn (Booking $record) => ContractResource::getUrl('create', [
-                            'booking_id'    => $record->id,
-                            'customer_id'   => $record->customer_id,
-                            'campaign_name' => $record->campaign_name,
-                            'start_date'    => $record->start_date?->format('Y-m-d'),
-                            'end_date'      => $record->end_date?->format('Y-m-d'),
-                            'total_value'   => $record->total_budget,
-                        ])),
+                        ->requiresConfirmation()
+                        ->modalHeading('Tạo hợp đồng từ Booking?')
+                        ->modalDescription('Hệ thống sẽ tạo hợp đồng quảng cáo với đầy đủ hạng mục từ line items của Booking.')
+                        ->action(fn (Booking $record) => redirect(
+                            ContractResource::getUrl('edit', ['record' => static::createContractFromBooking($record)])
+                        )),
 
                     // Cập nhật trạng thái chiến dịch
                     Tables\Actions\Action::make('mark_active')
@@ -197,7 +197,55 @@ class BookingResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
-public static function getRelationManagers(): array
+// ─── Create contract from Booking ─────────────────────────────────────────
+
+    public static function createContractFromBooking(Booking $booking): Contract
+    {
+        $year  = now()->format('Y');
+        $count = Contract::whereYear('created_at', $year)->withTrashed()->count() + 1;
+
+        $contract = Contract::create([
+            'booking_id'            => $booking->id,
+            'contract_code'         => 'HĐ-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT),
+            'contract_type'         => 'ads',
+            'name'                  => $booking->campaign_name,
+            'customer_id'           => $booking->customer_id,
+            'total_value_estimated' => $booking->total_budget,
+            'currency'              => $booking->currency ?? 'VND',
+            'sale_owner_id'         => $booking->sale_id,
+            'account_owner_id'      => $booking->adops_id,
+            'start_date'            => $booking->start_date,
+            'end_date'              => $booking->end_date,
+            'status'                => 'draft',
+        ]);
+
+        foreach ($booking->lineItems()->orderBy('sort_order')->get() as $item) {
+            $names      = $item->targeting_names ?? [];
+            $networkStr = implode(', ', $names);
+            $lineName   = $networkStr ? $networkStr . ' — ' . $item->format : $item->format;
+
+            ContractLine::create([
+                'contract_id'   => $contract->id,
+                'name'          => $lineName,
+                'planned_value' => (float) ($item->line_budget ?? 0),
+                'actual_value'  => 0,
+                'vat_rate'      => 10,
+                'start_date'    => $item->start_date,
+                'end_date'      => $item->end_date,
+            ]);
+        }
+
+        $booking->update(['contract_id' => $contract->id]);
+
+        Notification::make()
+            ->title("Đã tạo hợp đồng {$contract->contract_code}")
+            ->success()
+            ->send();
+
+        return $contract;
+    }
+
+    public static function getRelationManagers(): array
     {
         return [
             RelationManagers\LineItemsRelationManager::class,
