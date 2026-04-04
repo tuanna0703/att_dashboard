@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\BookingResource\Pages;
 use App\Filament\Resources\BookingResource\RelationManagers;
+use App\Filament\Resources\PlanResource;
 use App\Models\Booking;
 use App\Models\Contract;
 use App\Models\Customer;
@@ -83,16 +84,18 @@ class BookingResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('booking_no')
-                    ->label('Mã Booking')
-                    ->searchable()
-                    ->sortable()
-                    ->weight('bold'),
-
                 Tables\Columns\TextColumn::make('campaign_name')
-                    ->label('Campaign')
-                    ->searchable()
-                    ->limit(40),
+                    ->label('Booking')
+                    ->html()
+                    ->formatStateUsing(function (Booking $record) {
+                        return '<div class="font-semibold text-gray-950 dark:text-white">' . e($record->campaign_name) . '</div>'
+                            . '<div class="text-xs text-gray-400 mt-0.5">' . e($record->booking_no) . '</div>';
+                    })
+                    ->searchable(query: fn ($query, string $search) =>
+                        $query->where('booking_no', 'like', "%{$search}%")
+                            ->orWhere('campaign_name', 'like', "%{$search}%")
+                    )
+                    ->url(fn (Booking $record) => static::getUrl('view', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('customer.name')
                     ->label('Khách hàng')
@@ -106,30 +109,18 @@ class BookingResource extends Resource
                     ->label('AdOps')
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('start_date')
-                    ->label('Bắt đầu')
-                    ->date('d/m/Y')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('end_date')
-                    ->label('Kết thúc')
-                    ->date('d/m/Y'),
-
                 Tables\Columns\TextColumn::make('total_budget')
                     ->label('Ngân sách')
-                    ->money('VND')
+                    ->money(fn (Booking $record) => $record->currency ?? 'VND')
+                    ->alignEnd()
+                    ->weight('bold')
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('contract.contract_code')
-                    ->label('Hợp đồng')
-                    ->placeholder('Chưa có')
-                    ->badge()
-                    ->color('success'),
-
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Trạng thái')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => Booking::$statuses[$state] ?? $state)
-                    ->colors(Booking::$statusColors),
+                    ->color(fn ($state) => Booking::$statusColors[$state] ?? 'gray'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -224,7 +215,7 @@ class BookingResource extends Resource
                 TextEntry::make('adops.name')->label('AdOps')->placeholder('—'),
                 TextEntry::make('start_date')->label('Bắt đầu')->date('d/m/Y'),
                 TextEntry::make('end_date')->label('Kết thúc')->date('d/m/Y'),
-                TextEntry::make('total_budget')->label('Ngân sách')->money('VND')->placeholder('—'),
+                TextEntry::make('total_budget')->label('Ngân sách')->money(fn (Booking $record) => $record->currency ?? 'VND')->placeholder('—'),
                 TextEntry::make('contract.contract_code')
                     ->label('Hợp đồng')
                     ->placeholder('Chưa có hợp đồng')
@@ -234,17 +225,19 @@ class BookingResource extends Resource
                 TextEntry::make('note')->label('Ghi chú')->placeholder('—')->columnSpanFull(),
             ])->columns(4),
 
-            Section::make('Revision áp dụng')->schema([
-                TextEntry::make('finalRevision.revision_number')
-                    ->label('Số revision')
-                    ->prefix('#'),
-                TextEntry::make('finalRevision.adops_note')
-                    ->label('Ghi chú AdOps')
-                    ->placeholder('—'),
-                TextEntry::make('finalRevision.customer_note')
-                    ->label('Ghi chú KH')
-                    ->placeholder('—'),
-            ])->columns(3),
+            Section::make('Plan gốc')->schema([
+                TextEntry::make('plan.plan_no')
+                    ->label('Mã Plan')
+                    ->placeholder('—')
+                    ->url(fn (Booking $record) => $record->plan_id
+                        ? PlanResource::getUrl('view', ['record' => $record->plan_id])
+                        : null
+                    )
+                    ->color('primary'),
+                TextEntry::make('plan.version')
+                    ->label('Phiên bản')
+                    ->formatStateUsing(fn ($state) => $state ? 'v' . $state : '—'),
+            ])->columns(2),
         ]);
     }
 
