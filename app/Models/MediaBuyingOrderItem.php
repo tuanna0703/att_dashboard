@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\BookingLineItem;
 
 class MediaBuyingOrderItem extends Model
 {
     protected $fillable = [
         'media_buying_order_id',
+        'booking_line_item_id',
         'ad_network_id',
         'screen_id',
         'description',
@@ -68,5 +70,10 @@ class MediaBuyingOrderItem extends Model
     public function screen(): BelongsTo
     {
         return $this->belongsTo(Screen::class);
+    }
+
+    public function bookingLineItem(): BelongsTo
+    {
+        return $this->belongsTo(BookingLineItem::class);
     }
 }

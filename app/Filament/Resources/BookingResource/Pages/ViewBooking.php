@@ -6,6 +6,7 @@ use App\Filament\Resources\BookingResource;
 use App\Filament\Resources\BookingResource\RelationManagers\LineItemsRelationManager;
 use App\Filament\Resources\BriefResource;
 use App\Filament\Resources\ContractResource;
+use App\Filament\Resources\MediaBuyingOrderResource;
 use App\Filament\Resources\PlanResource;
 use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Booking;
@@ -58,6 +59,19 @@ class ViewBooking extends ViewRecord
                     ->action(function () {
                         $contract = BookingResource::createContractFromBooking($this->record);
                         $this->redirect(ContractResource::getUrl('edit', ['record' => $contract]));
+                    }),
+
+                Actions\Action::make('create_mbo')
+                    ->label('Tạo MBO')
+                    ->icon('heroicon-o-shopping-cart')
+                    ->color('warning')
+                    ->visible(fn () => ! is_null($this->record->contract_id))
+                    ->requiresConfirmation()
+                    ->modalHeading('Tạo Media Buying Order từ Booking này?')
+                    ->modalDescription('Hệ thống sẽ tạo MBO với đầy đủ items từ line items của Booking.')
+                    ->action(function () {
+                        $mbo = BookingResource::createMBOFromBooking($this->record);
+                        $this->redirect(MediaBuyingOrderResource::getUrl('edit', ['record' => $mbo]));
                     }),
 
                 Actions\Action::make('mark_active')

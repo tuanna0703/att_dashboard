@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\BookingResource\Pages;
 use App\Filament\Resources\BookingResource\RelationManagers;
 use App\Filament\Resources\ContractResource;
+use App\Filament\Resources\MediaBuyingOrderResource;
 use App\Filament\Resources\PlanResource;
 use App\Filament\Resources\Shared\ActivityLogRelationManager;
 use App\Models\Booking;
@@ -12,6 +13,8 @@ use App\Models\Contract;
 use App\Models\ContractLine;
 use App\Models\Customer;
 use App\Models\CustomerContact;
+use App\Models\MediaBuyingOrder;
+use App\Models\MediaBuyingOrderItem;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -158,6 +161,19 @@ class BookingResource extends Resource
                             ContractResource::getUrl('edit', ['record' => static::createContractFromBooking($record)])
                         )),
 
+                    // Tạo MBO từ Booking
+                    Tables\Actions\Action::make('create_mbo')
+                        ->label('Tạo MBO')
+                        ->icon('heroicon-o-shopping-cart')
+                        ->color('warning')
+                        ->visible(fn (Booking $record) => ! is_null($record->contract_id))
+                        ->requiresConfirmation()
+                        ->modalHeading('Tạo Media Buying Order từ Booking?')
+                        ->modalDescription('Hệ thống sẽ tạo MBO với đầy đủ items từ line items của Booking.')
+                        ->action(fn (Booking $record) => redirect(
+                            MediaBuyingOrderResource::getUrl('edit', ['record' => static::createMBOFromBooking($record)])
+                        )),
+
                     // Cập nhật trạng thái chiến dịch
                     Tables\Actions\Action::make('mark_active')
                         ->label('Bắt đầu chạy')
@@ -250,6 +266,59 @@ class BookingResource extends Resource
             ->send();
 
         return $contract;
+    }
+
+// ─── Create MBO from Booking ──────────────────────────────────────────────
+
+    public static function createMBOFromBooking(Booking $booking): MediaBuyingOrder
+    {
+        $mbo = MediaBuyingOrder::create([
+            'contract_id' => $booking->contract_id,
+            'booking_id'  => $booking->id,
+            'created_by'  => auth()->id(),
+            'total_amount'=> 0,
+            'status'      => 'draft',
+        ]);
+
+        $total = 0;
+
+        foreach ($booking->lineItems()->orderBy('sort_order')->get() as $item) {
+            $networkIds = $item->targeting ?? [];
+            $names      = $item->targeting_names ?? [];
+            $networkStr = implode(', ', $names);
+            $description = $networkStr
+                ? $networkStr . ' — ' . $item->format
+                : $item->format;
+
+            $days       = (int) ($item->live_days ?? 1);
+            $unitPrice  = (float) ($item->unit_cost ?? 0);
+            $totalPrice = (float) ($item->line_budget ?? ($unitPrice * $days));
+
+            MediaBuyingOrderItem::create([
+                'media_buying_order_id' => $mbo->id,
+                'booking_line_item_id'  => $item->id,
+                'ad_network_id'         => $networkIds[0] ?? null,
+                'description'           => $description,
+                'start_date'            => $item->start_date,
+                'end_date'              => $item->end_date,
+                'screen_count'          => 1,
+                'days'                  => $days ?: 1,
+                'unit_price'            => $unitPrice,
+                'total_price'           => $totalPrice,
+            ]);
+
+            $total += $totalPrice;
+        }
+
+        $mbo->updateQuietly(['total_amount' => $total]);
+
+        Notification::make()
+            ->title("Đã tạo MBO {$mbo->order_no}")
+            ->body($booking->lineItems()->count() . ' items đã được tạo từ line items.')
+            ->success()
+            ->send();
+
+        return $mbo;
     }
 
     public static function getRelationManagers(): array
