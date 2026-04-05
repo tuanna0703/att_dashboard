@@ -13,7 +13,6 @@ use App\Models\MediaBuyingOrder;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
@@ -102,8 +101,9 @@ class MediaBuyingOrderResource extends Resource
                                 Forms\Components\Select::make('targeting')
                                     ->label('Mạng lưới')
                                     ->multiple()
-                                    ->options(function (Get $get) {
-                                        $bookingId = $get('../../booking_id');
+                                    ->options(function ($livewire) {
+                                        $bookingId = $livewire->record?->booking_id
+                                            ?? data_get($livewire, 'data.booking_id');
                                         if ($bookingId) {
                                             $networkIds = Booking::find($bookingId)
                                                 ?->lineItems
@@ -117,6 +117,11 @@ class MediaBuyingOrderResource extends Resource
                                             }
                                         }
                                         return AdNetwork::where('is_active', true)->pluck('name', 'id');
+                                    })
+                                    ->afterStateHydrated(function ($component, $state, $record) {
+                                        if (empty($state) && $record?->ad_network_id) {
+                                            $component->state([$record->ad_network_id]);
+                                        }
                                     })
                                     ->required()
                                     ->searchable(),
