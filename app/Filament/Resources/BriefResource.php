@@ -403,6 +403,11 @@ class BriefResource extends Resource
                         ->visible(fn (Brief $record) => $record->status === 'draft'),
                 ]),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 
