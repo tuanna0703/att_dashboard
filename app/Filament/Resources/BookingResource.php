@@ -280,19 +280,9 @@ class BookingResource extends Resource
             'status'      => 'draft',
         ]);
 
-        $total = 0;
-
         foreach ($booking->lineItems()->orderBy('sort_order')->get() as $item) {
             $networkIds = $item->targeting ?? [];
             $names      = $item->targeting_names ?? [];
-            $networkStr = implode(', ', $names);
-            $description = $networkStr
-                ? $networkStr . ' — ' . $item->format
-                : $item->format;
-
-            $days       = (int) ($item->live_days ?? 1);
-            $unitPrice  = (float) ($item->unit_cost ?? 0);
-            $totalPrice = (float) ($item->line_budget ?? ($unitPrice * $days));
 
             MediaBuyingOrderItem::create([
                 'media_buying_order_id' => $mbo->id,
@@ -303,16 +293,9 @@ class BookingResource extends Resource
                 'description'           => $item->format,
                 'start_date'            => $item->start_date,
                 'end_date'              => $item->end_date,
-                'screen_count'          => 1,
-                'days'                  => $days ?: 1,
-                'unit_price'            => $unitPrice,
-                'total_price'           => $totalPrice,
+                'total_price'           => 0,
             ]);
-
-            $total += $totalPrice;
         }
-
-        $mbo->updateQuietly(['total_amount' => $total]);
 
         Notification::make()
             ->title("Đã tạo MBO {$mbo->order_no}")
