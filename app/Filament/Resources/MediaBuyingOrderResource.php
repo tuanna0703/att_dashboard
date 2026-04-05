@@ -98,29 +98,19 @@ class MediaBuyingOrderResource extends Resource
                         ->relationship('items')
                         ->label('')
                         ->schema([
+                            // ── Row 1: Network + Mô tả ──────────────────────────
                             Forms\Components\Select::make('ad_network_id')
                                 ->label('Mạng lưới')
                                 ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
                                 ->required()
-                                ->searchable()
-                                ->columnSpan(2),
+                                ->searchable(),
 
                             Forms\Components\TextInput::make('description')
-                                ->label('Mô tả vị trí / màn hình')
-                                ->columnSpan(2),
+                                ->label('Mô tả / Màn hình'),
 
+                            // ── Row 2: Số lượng, Đơn giá, Ngày, Thành tiền ─────
                             Forms\Components\TextInput::make('screen_count')
                                 ->label('Số màn hình')
-                                ->numeric()
-                                ->default(1)
-                                ->minValue(1)
-                                ->live(debounce: 400)
-                                ->afterStateUpdated(function (Get $get, Set $set) {
-                                    $set('total_price', self::calcTotal($get));
-                                }),
-
-                            Forms\Components\TextInput::make('days')
-                                ->label('Số ngày')
                                 ->numeric()
                                 ->default(1)
                                 ->minValue(1)
@@ -144,6 +134,14 @@ class MediaBuyingOrderResource extends Resource
                                     $set('total_price', self::calcTotal($get));
                                 }),
 
+                            Forms\Components\DatePicker::make('start_date')
+                                ->label('Từ ngày')
+                                ->displayFormat('d/m/Y'),
+
+                            Forms\Components\DatePicker::make('end_date')
+                                ->label('Tới ngày')
+                                ->displayFormat('d/m/Y'),
+
                             Forms\Components\TextInput::make('total_price')
                                 ->label('Thành tiền')
                                 ->prefix('₫')
@@ -156,11 +154,12 @@ class MediaBuyingOrderResource extends Resource
                                 })
                                 ->disabled(),
 
+                            // ── Row 3: Ghi chú ──────────────────────────────────
                             Forms\Components\TextInput::make('note')
                                 ->label('Ghi chú')
-                                ->columnSpan(2),
+                                ->columnSpanFull(),
                         ])
-                        ->columns(9)
+                        ->columns(5)
                         ->addActionLabel('+ Thêm dòng')
                         ->defaultItems(1)
                         ->reorderable()
