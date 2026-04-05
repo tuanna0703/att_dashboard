@@ -14,8 +14,8 @@ class AdNetworkResource extends Resource
 {
     protected static ?string $model = AdNetwork::class;
     protected static ?string $navigationIcon  = 'heroicon-o-signal';
-    protected static ?string $navigationGroup = 'Booking';
-    protected static ?int    $navigationSort  = 10;
+    protected static ?string $navigationGroup = 'Inventory';
+    protected static ?int    $navigationSort  = 2;
     protected static ?string $modelLabel      = 'Mạng lưới QC';
     protected static ?string $pluralModelLabel = 'Mạng lưới QC';
 

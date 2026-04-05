@@ -23,7 +23,7 @@ class MediaBuyingOrderResource extends Resource
     protected static ?string $model = MediaBuyingOrder::class;
     protected static ?string $navigationIcon  = 'heroicon-o-shopping-cart';
     protected static ?string $navigationGroup = 'Booking';
-    protected static ?int    $navigationSort  = 5;
+    protected static ?int    $navigationSort  = 4;
     protected static ?string $modelLabel      = 'Media Buying Order';
     protected static ?string $pluralModelLabel = 'Media Buying Orders';
 

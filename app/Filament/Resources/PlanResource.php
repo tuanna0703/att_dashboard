@@ -23,7 +23,7 @@ class PlanResource extends Resource
     protected static ?string $model = Plan::class;
     protected static ?string $navigationIcon  = 'heroicon-o-clipboard-document-list';
     protected static ?string $navigationGroup = 'Booking';
-    protected static ?int    $navigationSort  = 8;
+    protected static ?int    $navigationSort  = 2;
     protected static ?string $modelLabel       = 'Plan';
     protected static ?string $pluralModelLabel = 'Plans';
 

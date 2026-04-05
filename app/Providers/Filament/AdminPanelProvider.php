@@ -33,6 +33,7 @@ class AdminPanelProvider extends PanelProvider
                 'Hợp đồng',
                 'Công nợ',
                 'Chi phí',
+                'Inventory',
                 'Danh mục',
                 'Quản trị hệ thống',
             ])

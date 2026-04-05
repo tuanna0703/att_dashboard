@@ -15,8 +15,8 @@ class ScreenResource extends Resource
 {
     protected static ?string $model = Screen::class;
     protected static ?string $navigationIcon  = 'heroicon-o-tv';
-    protected static ?string $navigationGroup = 'Booking';
-    protected static ?int    $navigationSort  = 9;
+    protected static ?string $navigationGroup = 'Inventory';
+    protected static ?int    $navigationSort  = 1;
     protected static ?string $modelLabel       = 'Màn hình';
     protected static ?string $pluralModelLabel = 'Màn hình';
 
