@@ -172,6 +172,7 @@ class RolePermissionSeeder extends Seeder
             'contracts.viewAny', 'contracts.view',
             'bookings.viewAny', 'bookings.view',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
+            'media_buying_orders.create', 'media_buying_orders.update',
         ]);
 
         // ─── Departments ──────────────────────────────────────────────────────

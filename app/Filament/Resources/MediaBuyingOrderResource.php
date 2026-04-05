@@ -6,6 +6,9 @@ use App\Filament\Resources\MediaBuyingOrderResource\Pages;
 use App\Models\AdNetwork;
 use App\Models\Booking;
 use App\Models\Contract;
+use App\Models\Expense;
+use App\Models\ExpenseCategory;
+use App\Models\ExpenseItem;
 use App\Models\MediaBuyingOrder;
 use App\Models\User;
 use Filament\Forms;
@@ -313,7 +316,10 @@ class MediaBuyingOrderResource extends Resource
                                 'finance_approved_by'  => auth()->id(),
                                 'finance_approved_at'  => now(),
                             ]);
-                            Notification::make()->title('Kết toán đã duyệt — chuyển Buyer')->success()->send();
+
+                            static::createExpenseFromMBO($r);
+
+                            Notification::make()->title('Kết toán đã duyệt — đã tạo phiếu chi & chuyển Buyer')->success()->send();
                         }),
 
                     // Kết toán từ chối
@@ -393,6 +399,44 @@ class MediaBuyingOrderResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+// ─── Create Expense from approved MBO ─────────────────────────────────────
+
+    public static function createExpenseFromMBO(MediaBuyingOrder $mbo): Expense
+    {
+        $category = ExpenseCategory::where('code', 'CP-HD-MH')->first();
+
+        $expense = Expense::create([
+            'expense_date'        => now()->toDateString(),
+            'expense_category_id' => $category?->id,
+            'contract_id'         => $mbo->contract_id,
+            'total_amount'        => $mbo->total_amount,
+            'payment_method'      => 'bank_transfer',
+            'recorded_by'         => auth()->id(),
+            'status'              => 'approved',
+            'approved_by'         => auth()->id(),
+            'approved_at'         => now(),
+            'note'                => "Tự động tạo từ MBO {$mbo->order_no}",
+        ]);
+
+        foreach ($mbo->items()->with('adNetwork')->get() as $item) {
+            $networkName = $item->adNetwork?->name ?? '';
+            $itemName    = $networkName
+                ? $networkName . ' — ' . ($item->description ?? 'Media buying')
+                : ($item->description ?? 'Media buying');
+
+            ExpenseItem::create([
+                'expense_id' => $expense->id,
+                'name'       => $itemName,
+                'quantity'   => $item->screen_count * $item->days,
+                'unit'       => 'slot',
+                'unit_price' => $item->unit_price,
+                'amount'     => $item->total_price,
+            ]);
+        }
+
+        return $expense;
     }
 
     public static function canViewAny(): bool
