@@ -119,8 +119,21 @@ class MediaBuyingOrderResource extends Resource
                                         return AdNetwork::where('is_active', true)->pluck('name', 'id');
                                     })
                                     ->afterStateHydrated(function ($component, $state, $record) {
-                                        if (empty($state) && $record?->ad_network_id) {
-                                            $component->state([$record->ad_network_id]);
+                                        // Already has targeting data — use it
+                                        if (! empty($state)) {
+                                            return;
+                                        }
+                                        // Fallback: read from linked booking line item
+                                        if ($record?->booking_line_item_id) {
+                                            $bli = $record->bookingLineItem;
+                                            if ($bli && ! empty($bli->targeting)) {
+                                                $component->state(array_map('intval', $bli->targeting));
+                                                return;
+                                            }
+                                        }
+                                        // Fallback: single ad_network_id
+                                        if ($record?->ad_network_id) {
+                                            $component->state([(int) $record->ad_network_id]);
                                         }
                                     })
                                     ->required()
@@ -144,7 +157,7 @@ class MediaBuyingOrderResource extends Resource
                                     ->label('Tổng tiền')
                                     ->prefix('₫')
                                     ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                    ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
+                                    ->dehydrateStateUsing(fn ($state) => (float) str_replace('.', '', (string) ($state ?? 0)))
                                     ->afterStateHydrated(function ($component, $state) {
                                         if ($state !== null && $state !== '') {
                                             $component->state(number_format((float) $state, 0, ',', '.'));
