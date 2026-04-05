@@ -387,6 +387,11 @@ class MediaBuyingOrderResource extends Resource
                         ->visible(fn (MediaBuyingOrder $r) => $r->status === 'draft'),
                 ]),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
             ->defaultSort('created_at', 'desc');
     }
 

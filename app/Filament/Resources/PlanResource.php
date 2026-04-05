@@ -197,6 +197,11 @@ class PlanResource extends Resource
                         ->modalDescription('Toàn bộ line items của Plan sẽ được sao chép vào Booking. Dữ liệu sẽ là bản final để media buying và finance kiểm soát.')
                         ->action(fn (Plan $record) => static::createBookingFromPlan($record)),
                 ]),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
         // Note: no ->defaultSort() — ordering is handled in ListPlans::getTableQuery()
     }

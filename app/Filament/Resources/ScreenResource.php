@@ -221,6 +221,11 @@ class ScreenResource extends Resource
                     Tables\Actions\RestoreAction::make(),
                 ]),
             ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
             ->defaultSort('code');
     }
 
