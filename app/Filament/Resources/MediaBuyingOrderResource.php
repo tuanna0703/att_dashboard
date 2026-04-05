@@ -99,67 +99,69 @@ class MediaBuyingOrderResource extends Resource
                         ->label('')
                         ->schema([
                             // ── Row 1: Network + Mô tả ──────────────────────────
-                            Forms\Components\Select::make('ad_network_id')
-                                ->label('Mạng lưới')
-                                ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
-                                ->required()
-                                ->searchable(),
+                            Forms\Components\Grid::make(2)->schema([
+                                Forms\Components\Select::make('ad_network_id')
+                                    ->label('Mạng lưới')
+                                    ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
+                                    ->required()
+                                    ->searchable(),
 
-                            Forms\Components\TextInput::make('description')
-                                ->label('Mô tả / Màn hình'),
+                                Forms\Components\TextInput::make('description')
+                                    ->label('Mô tả / Màn hình'),
+                            ]),
 
-                            // ── Row 2: Số lượng, Đơn giá, Ngày, Thành tiền ─────
-                            Forms\Components\TextInput::make('screen_count')
-                                ->label('Số màn hình')
-                                ->numeric()
-                                ->default(1)
-                                ->minValue(1)
-                                ->live(debounce: 400)
-                                ->afterStateUpdated(function (Get $get, Set $set) {
-                                    $set('total_price', self::calcTotal($get));
-                                }),
+                            // ── Row 2: Số lượng, Đơn giá, Từ ngày, Tới ngày, Thành tiền
+                            Forms\Components\Grid::make(5)->schema([
+                                Forms\Components\TextInput::make('screen_count')
+                                    ->label('Số màn hình')
+                                    ->numeric()
+                                    ->default(1)
+                                    ->minValue(1)
+                                    ->live(debounce: 400)
+                                    ->afterStateUpdated(function (Get $get, Set $set) {
+                                        $set('total_price', self::calcTotal($get));
+                                    }),
 
-                            Forms\Components\TextInput::make('unit_price')
-                                ->label('Đơn giá / ngày')
-                                ->prefix('₫')
-                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
-                                ->afterStateHydrated(function ($component, $state) {
-                                    if ($state !== null && $state !== '') {
-                                        $component->state(number_format((float) $state, 0, ',', '.'));
-                                    }
-                                })
-                                ->live(debounce: 400)
-                                ->afterStateUpdated(function (Get $get, Set $set) {
-                                    $set('total_price', self::calcTotal($get));
-                                }),
+                                Forms\Components\TextInput::make('unit_price')
+                                    ->label('Đơn giá / ngày')
+                                    ->prefix('₫')
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
+                                    ->afterStateHydrated(function ($component, $state) {
+                                        if ($state !== null && $state !== '') {
+                                            $component->state(number_format((float) $state, 0, ',', '.'));
+                                        }
+                                    })
+                                    ->live(debounce: 400)
+                                    ->afterStateUpdated(function (Get $get, Set $set) {
+                                        $set('total_price', self::calcTotal($get));
+                                    }),
 
-                            Forms\Components\DatePicker::make('start_date')
-                                ->label('Từ ngày')
-                                ->displayFormat('d/m/Y'),
+                                Forms\Components\DatePicker::make('start_date')
+                                    ->label('Từ ngày')
+                                    ->displayFormat('d/m/Y'),
 
-                            Forms\Components\DatePicker::make('end_date')
-                                ->label('Tới ngày')
-                                ->displayFormat('d/m/Y'),
+                                Forms\Components\DatePicker::make('end_date')
+                                    ->label('Tới ngày')
+                                    ->displayFormat('d/m/Y'),
 
-                            Forms\Components\TextInput::make('total_price')
-                                ->label('Thành tiền')
-                                ->prefix('₫')
-                                ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
-                                ->afterStateHydrated(function ($component, $state) {
-                                    if ($state !== null && $state !== '') {
-                                        $component->state(number_format((float) $state, 0, ',', '.'));
-                                    }
-                                })
-                                ->disabled(),
+                                Forms\Components\TextInput::make('total_price')
+                                    ->label('Thành tiền')
+                                    ->prefix('₫')
+                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
+                                    ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
+                                    ->afterStateHydrated(function ($component, $state) {
+                                        if ($state !== null && $state !== '') {
+                                            $component->state(number_format((float) $state, 0, ',', '.'));
+                                        }
+                                    })
+                                    ->disabled(),
+                            ]),
 
                             // ── Row 3: Ghi chú ──────────────────────────────────
                             Forms\Components\TextInput::make('note')
-                                ->label('Ghi chú')
-                                ->columnSpanFull(),
+                                ->label('Ghi chú'),
                         ])
-                        ->columns(5)
                         ->addActionLabel('+ Thêm dòng')
                         ->defaultItems(1)
                         ->reorderable()
