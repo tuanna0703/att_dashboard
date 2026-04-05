@@ -13,6 +13,7 @@ use App\Models\MediaBuyingOrder;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Forms\Get;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
@@ -101,7 +102,22 @@ class MediaBuyingOrderResource extends Resource
                                 Forms\Components\Select::make('targeting')
                                     ->label('Mạng lưới')
                                     ->multiple()
-                                    ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
+                                    ->options(function (Get $get) {
+                                        $bookingId = $get('../../booking_id');
+                                        if ($bookingId) {
+                                            $networkIds = Booking::find($bookingId)
+                                                ?->lineItems
+                                                ->pluck('targeting')
+                                                ->flatten()
+                                                ->unique()
+                                                ->filter()
+                                                ->values();
+                                            if ($networkIds && $networkIds->isNotEmpty()) {
+                                                return AdNetwork::whereIn('id', $networkIds)->pluck('name', 'id');
+                                            }
+                                        }
+                                        return AdNetwork::where('is_active', true)->pluck('name', 'id');
+                                    })
                                     ->required()
                                     ->searchable(),
 
