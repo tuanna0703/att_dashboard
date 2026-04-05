@@ -76,44 +76,29 @@ class PlansRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('plan_no')
                     ->label('Mã Plan')
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->url(fn (Plan $record) => PlanResource::getUrl('view', ['record' => $record])),
 
                 Tables\Columns\TextColumn::make('version')
                     ->label('Ver.')
                     ->prefix('v')
                     ->alignCenter(),
 
-                Tables\Columns\TextColumn::make('adops.name')
-                    ->label('AdOps')
+                Tables\Columns\TextColumn::make('sale.name')
+                    ->label('Sale')
+                    ->getStateUsing(fn (Plan $record) => $record->brief?->sale?->name)
                     ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('budget')
                     ->label('Ngân sách')
-                    ->money('VND')
+                    ->money(fn (Plan $record) => $record->brief?->currency ?? 'VND')
                     ->placeholder('—'),
 
-                Tables\Columns\TextColumn::make('screen_count')
-                    ->label('Line items')
-                    ->alignCenter()
-                    ->placeholder('—'),
-
-                Tables\Columns\IconColumn::make('file_path')
-                    ->label('File')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-paper-clip')
-                    ->falseIcon('heroicon-o-minus')
-                    ->getStateUsing(fn ($record) => (bool) $record->file_path),
-
-                Tables\Columns\TextColumn::make('sale_comment')
-                    ->label('Comment của Sale')
-                    ->limit(40)
-                    ->placeholder('—')
-                    ->tooltip(fn ($record) => $record->sale_comment),
-
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Trạng thái')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => Plan::$statuses[$state] ?? $state)
-                    ->colors(Plan::$statusColors),
+                    ->color(fn ($state) => Plan::$statusColors[$state] ?? 'gray'),
 
                 Tables\Columns\TextColumn::make('responded_at')
                     ->label('Phản hồi lúc')

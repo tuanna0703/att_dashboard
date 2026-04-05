@@ -410,7 +410,6 @@ class BriefResource extends Resource
     {
         return [
             RelationManagers\PlansRelationManager::class,
-            RelationManagers\RevisionsRelationManager::class,
             ActivityLogRelationManager::class,
         ];
     }
