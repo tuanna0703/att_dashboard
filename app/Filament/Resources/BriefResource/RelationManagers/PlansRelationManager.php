@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 class PlansRelationManager extends RelationManager
 {
     protected static string $relationship = 'plans';
-    protected static ?string $title       = 'Plans của AdOps';
+    protected static ?string $title       = 'Plans';
 
     public function isReadOnly(): bool
     {
