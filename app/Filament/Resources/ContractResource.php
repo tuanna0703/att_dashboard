@@ -187,60 +187,70 @@ class ContractResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('contract_code')
-                    ->label('Số HĐ')
-                    ->searchable()
-                    ->sortable()
-                    ->weight('bold'),
                 Tables\Columns\TextColumn::make('name')
-                    ->label('Tên hợp đồng')
-                    ->searchable()
-                    ->limit(40)
-                    ->placeholder('—'),
+                    ->label('Hợp đồng')
+                    ->searchable(['name', 'contract_code'])
+                    ->sortable()
+                    ->html()
+                    ->getStateUsing(fn (Contract $record) =>
+                        '<div class="font-semibold text-gray-950 dark:text-white">'
+                            . e($record->name ?: '—')
+                        . '</div>'
+                        . '<div class="text-xs text-gray-500 dark:text-gray-400">'
+                            . e($record->contract_code)
+                        . '</div>'
+                    )
+                    ->url(fn (Contract $record) => static::getUrl('view', ['record' => $record])),
                 Tables\Columns\TextColumn::make('customer.name')
                     ->label('Khách hàng')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\BadgeColumn::make('contract_type')
+                Tables\Columns\TextColumn::make('contract_type')
                     ->label('Loại')
+                    ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'ads'          => 'Quảng cáo',
                         'project'      => 'Dự án',
                         'subscription' => 'Thuê bao',
                         default        => $state,
                     })
-                    ->colors([
-                        'warning' => 'ads',
-                        'primary' => 'project',
-                        'success' => 'subscription',
-                    ]),
+                    ->color(fn ($state) => match ($state) {
+                        'ads'          => 'warning',
+                        'project'      => 'primary',
+                        'subscription' => 'success',
+                        default        => 'gray',
+                    }),
                 Tables\Columns\TextColumn::make('total_value_estimated')
                     ->label('Giá trị (est.)')
-                    ->money('VND')
+                    ->money(fn (Contract $record) => $record->currency ?? 'VND')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('signed_date')
-                    ->label('Ngày ký')
-                    ->date('d/m/Y')
+                    ->label('Ngày ký / Kết thúc')
+                    ->html()
+                    ->getStateUsing(fn (Contract $record) =>
+                        '<span class="tabular-nums text-sm">' . ($record->signed_date?->format('d/m/Y') ?? '—') . '</span>'
+                        . '<span class="text-gray-400 dark:text-gray-500 text-xs mx-1.5">→</span>'
+                        . '<span class="tabular-nums text-sm' . ($record->end_date?->isPast() ? ' text-danger-600 dark:text-danger-400' : '') . '">'
+                            . ($record->end_date?->format('d/m/Y') ?? '—')
+                        . '</span>'
+                    )
                     ->sortable(),
-                Tables\Columns\TextColumn::make('end_date')
-                    ->label('Kết thúc')
-                    ->date('d/m/Y')
-                    ->sortable()
-                    ->color(fn ($record) => $record?->end_date?->isPast() ? 'danger' : null),
-                Tables\Columns\BadgeColumn::make('status')
+                Tables\Columns\TextColumn::make('status')
                     ->label('Trạng thái')
-                    ->colors([
-                        'gray'    => 'draft',
-                        'success' => 'active',
-                        'primary' => 'completed',
-                        'danger'  => 'cancelled',
-                    ])
+                    ->badge()
                     ->formatStateUsing(fn ($state) => match ($state) {
                         'draft'     => 'Nháp',
                         'active'    => 'Đang chạy',
                         'completed' => 'Hoàn thành',
                         'cancelled' => 'Huỷ',
                         default     => $state,
+                    })
+                    ->color(fn ($state) => match ($state) {
+                        'draft'     => 'gray',
+                        'active'    => 'success',
+                        'completed' => 'primary',
+                        'cancelled' => 'danger',
+                        default     => 'gray',
                     }),
                 Tables\Columns\TextColumn::make('saleOwner.name')
                     ->label('Sale')
