@@ -13,8 +13,6 @@ use App\Models\MediaBuyingOrder;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\RawJs;
@@ -98,10 +96,11 @@ class MediaBuyingOrderResource extends Resource
                         ->relationship('items')
                         ->label('')
                         ->schema([
-                            // ── Row 1: Network + Mô tả ──────────────────────────
+                            // ── Row 1: Networks + Mô tả ─────────────────────────
                             Forms\Components\Grid::make(2)->schema([
-                                Forms\Components\Select::make('ad_network_id')
+                                Forms\Components\Select::make('targeting')
                                     ->label('Mạng lưới')
+                                    ->multiple()
                                     ->options(AdNetwork::where('is_active', true)->pluck('name', 'id'))
                                     ->required()
                                     ->searchable(),
@@ -110,33 +109,8 @@ class MediaBuyingOrderResource extends Resource
                                     ->label('Mô tả / Màn hình'),
                             ]),
 
-                            // ── Row 2: Số lượng, Đơn giá, Từ ngày, Tới ngày, Thành tiền
-                            Forms\Components\Grid::make(5)->schema([
-                                Forms\Components\TextInput::make('screen_count')
-                                    ->label('Số màn hình')
-                                    ->numeric()
-                                    ->default(1)
-                                    ->minValue(1)
-                                    ->live(debounce: 400)
-                                    ->afterStateUpdated(function (Get $get, Set $set) {
-                                        $set('total_price', self::calcTotal($get));
-                                    }),
-
-                                Forms\Components\TextInput::make('unit_price')
-                                    ->label('Đơn giá / ngày')
-                                    ->prefix('₫')
-                                    ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
-                                    ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
-                                    ->afterStateHydrated(function ($component, $state) {
-                                        if ($state !== null && $state !== '') {
-                                            $component->state(number_format((float) $state, 0, ',', '.'));
-                                        }
-                                    })
-                                    ->live(debounce: 400)
-                                    ->afterStateUpdated(function (Get $get, Set $set) {
-                                        $set('total_price', self::calcTotal($get));
-                                    }),
-
+                            // ── Row 2: Từ ngày, Tới ngày, Tổng tiền ────────────
+                            Forms\Components\Grid::make(3)->schema([
                                 Forms\Components\DatePicker::make('start_date')
                                     ->label('Từ ngày')
                                     ->displayFormat('d/m/Y'),
@@ -146,7 +120,7 @@ class MediaBuyingOrderResource extends Resource
                                     ->displayFormat('d/m/Y'),
 
                                 Forms\Components\TextInput::make('total_price')
-                                    ->label('Thành tiền')
+                                    ->label('Tổng tiền')
                                     ->prefix('₫')
                                     ->mask(RawJs::make('$money($input, \',\', \'.\', 0)'))
                                     ->dehydrateStateUsing(fn ($s) => (float) str_replace('.', '', (string) ($s ?? 0)))
@@ -154,8 +128,7 @@ class MediaBuyingOrderResource extends Resource
                                         if ($state !== null && $state !== '') {
                                             $component->state(number_format((float) $state, 0, ',', '.'));
                                         }
-                                    })
-                                    ->disabled(),
+                                    }),
                             ]),
 
                             // ── Row 3: Ghi chú ──────────────────────────────────
@@ -167,23 +140,17 @@ class MediaBuyingOrderResource extends Resource
                         ->reorderable()
                         ->collapsible()
                         ->itemLabel(function (array $state): ?string {
-                            $networkId = $state['ad_network_id'] ?? null;
-                            if (! $networkId) return null;
-                            $network = AdNetwork::find($networkId);
-                            $total   = (float) str_replace('.', '', (string) ($state['total_price'] ?? 0));
-                            return $network?->name . ($total > 0 ? ' — ' . number_format($total, 0, ',', '.') . ' ₫' : '');
+                            $targeting = $state['targeting'] ?? [];
+                            if (empty($targeting)) return null;
+                            $names = AdNetwork::whereIn('id', $targeting)->pluck('name')->implode(', ');
+                            $total = (float) str_replace('.', '', (string) ($state['total_price'] ?? 0));
+                            return $names . ($total > 0 ? ' — ' . number_format($total, 0, ',', '.') . ' ₫' : '');
                         }),
                 ]),
         ]);
     }
 
-    private static function calcTotal(Get $get): string
-    {
-        $screens    = (int) ($get('screen_count') ?? 1);
-        $days       = (int) ($get('days') ?? 1);
-        $unitPrice  = (float) str_replace('.', '', (string) ($get('unit_price') ?? 0));
-        return number_format($screens * $days * $unitPrice, 0, ',', '.');
-    }
+
 
     public static function table(Table $table): Table
     {

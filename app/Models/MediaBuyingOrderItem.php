@@ -12,6 +12,8 @@ class MediaBuyingOrderItem extends Model
         'media_buying_order_id',
         'booking_line_item_id',
         'ad_network_id',
+        'targeting',
+        'targeting_names',
         'screen_id',
         'description',
         'location_city',
@@ -28,24 +30,19 @@ class MediaBuyingOrderItem extends Model
     ];
 
     protected $casts = [
-        'start_date'  => 'date',
-        'end_date'    => 'date',
-        'unit_price'  => 'decimal:2',
-        'cpm'         => 'decimal:2',
-        'total_price' => 'decimal:2',
+        'targeting'       => 'array',
+        'targeting_names' => 'array',
+        'start_date'      => 'date',
+        'end_date'        => 'date',
+        'unit_price'      => 'decimal:2',
+        'cpm'             => 'decimal:2',
+        'total_price'     => 'decimal:2',
     ];
 
-    // ─── Auto-calculate total_price ───────────────────────────────────────────
+    // ─── Recalculate parent total on save/delete ──────────────────────────────
 
     protected static function booted(): void
     {
-        $recalc = function (MediaBuyingOrderItem $item) {
-            $item->total_price = $item->unit_price * $item->screen_count * $item->days;
-        };
-
-        static::creating($recalc);
-        static::updating($recalc);
-
         static::saved(function (MediaBuyingOrderItem $item) {
             $item->mediaBuyingOrder->recalculateTotal();
         });
