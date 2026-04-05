@@ -127,15 +127,21 @@ class ViewBrief extends ViewRecord
             // ── Tabs: General + Management ────────────────────────────────────
             Tabs::make()->tabs([
 
-                Tab::make('General')
-                    ->badge(fn () => Brief::$statuses[$this->record->status] ?? $this->record->status)
-                    ->badgeColor(fn () => Brief::$statusColors[$this->record->status] ?? 'gray')
-                    ->schema([
+                Tab::make('General')->schema([
                     TextEntry::make('campaign_name')
                         ->label('Tên Campaign'),
 
                     TextEntry::make('brief_no')
                         ->label('Mã Brief'),
+
+                    TextEntry::make('status')
+                        ->label('Trạng thái')
+                        ->badge()
+                        ->formatStateUsing(fn ($state) => Brief::$statuses[$state] ?? $state)
+                        ->color(fn ($state) => Brief::$statusColors[$state] ?? 'gray'),
+
+                    TextEntry::make('customer.name')
+                        ->label('Khách hàng'),
 
                     TextEntry::make('budget')
                         ->label('Budget')
@@ -145,19 +151,13 @@ class ViewBrief extends ViewRecord
                             : '—'),
 
                     TextEntry::make('start_date')
-                        ->label('Ngày bắt đầu')
-                        ->getStateUsing(fn ($record) => $record->briefLineItems->min('start_date'))
-                        ->date('d/m/Y')
-                        ->placeholder('—'),
-
-                    TextEntry::make('end_date')
-                        ->label('Ngày kết thúc')
-                        ->getStateUsing(fn ($record) => $record->briefLineItems->max('end_date'))
-                        ->date('d/m/Y')
-                        ->placeholder('—'),
-
-                    TextEntry::make('customer.name')
-                        ->label('Khách hàng'),
+                        ->label('Thời gian')
+                        ->html()
+                        ->getStateUsing(fn ($record) =>
+                            '<span class="tabular-nums text-sm">' . ($record->briefLineItems->min('start_date')?->format('d/m/Y') ?? '—') . '</span>'
+                            . '<span class="text-gray-400 dark:text-gray-500 text-xs mx-1.5">→</span>'
+                            . '<span class="tabular-nums text-sm">' . ($record->briefLineItems->max('end_date')?->format('d/m/Y') ?? '—') . '</span>'
+                        ),
                 ])->columns(3),
 
                 Tab::make('Management')->schema([
