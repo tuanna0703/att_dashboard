@@ -235,25 +235,47 @@ class PlanResource extends Resource
             $networkNames  = AdNetwork::whereIn('id', $networkIds)->orderBy('name')->pluck('name')->toArray();
 
             BookingLineItem::create([
-                'booking_id'        => $booking->id,
-                'plan_line_item_id' => $item->id,
-                'format'            => $item->format,
-                'targeting'         => $networkIds,
-                'targeting_names'   => $networkNames,
-                'start_date'        => $item->start_date,
-                'end_date'          => $item->end_date,
-                'live_days'         => $item->live_days,
-                'unit'              => $item->unit,
-                'guaranteed_units'  => $item->guaranteed_units,
-                'unit_cost'         => $item->unit_cost,
-                'daily_spots'       => $item->daily_spots,
-                'line_budget'       => $item->line_budget,
-                'est_impression'    => $item->est_impression,
-                'est_impression_day'=> $item->est_impression_day,
-                'est_ad_spot'       => $item->est_ad_spot,
-                'buying_status'     => 'pending',
-                'notes'             => $item->notes,
-                'sort_order'        => $item->sort_order ?? $index,
+                'booking_id'         => $booking->id,
+                'plan_line_item_id'  => $item->id,
+                'format'             => $item->format,
+                'targeting'          => $networkIds,
+                'targeting_names'    => $networkNames,
+                // Location
+                'city'               => $item->city,
+                'qty_location'       => $item->qty_location,
+                'qty_screen'         => $item->qty_screen,
+                // Dates
+                'start_date'         => $item->start_date,
+                'end_date'           => $item->end_date,
+                'live_days'          => $item->live_days,
+                // Airing
+                'time_from'          => $item->time_from,
+                'time_to'            => $item->time_to,
+                'total_hours'        => $item->total_hours,
+                'sov'                => $item->sov,
+                'duration_seconds'   => $item->duration_seconds,
+                'frequency_minutes'  => $item->frequency_minutes,
+                'daily_spots'        => $item->daily_spots,
+                // Buying weeks
+                'buy_weeks'          => $item->buy_weeks,
+                'foc_weeks'          => $item->foc_weeks,
+                'total_weeks'        => $item->total_weeks,
+                // Pricing
+                'unit'               => $item->unit,
+                'guaranteed_units'   => $item->guaranteed_units,
+                'unit_cost'          => $item->unit_cost,
+                'line_budget'        => $item->line_budget,
+                'gross_amount'       => $item->gross_amount,
+                'vat_rate'           => $item->vat_rate,
+                // KPI
+                'est_impression'     => $item->est_impression,
+                'est_impression_day' => $item->est_impression_day,
+                'est_ad_spot'        => $item->est_ad_spot,
+                'kpi_multiplier'     => $item->kpi_multiplier,
+                // Status
+                'buying_status'      => 'pending',
+                'notes'              => $item->notes,
+                'sort_order'         => $item->sort_order ?? $index,
             ]);
         }
 

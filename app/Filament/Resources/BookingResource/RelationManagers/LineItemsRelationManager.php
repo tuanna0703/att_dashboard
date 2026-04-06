@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\BookingResource\RelationManagers;
 
-use App\Models\AdNetwork;
 use App\Models\BookingLineItem;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
@@ -25,7 +24,7 @@ class LineItemsRelationManager extends RelationManager
             ->reorderable(false)
             ->defaultSort('sort_order')
             ->columns([
-                // ── Network / Format ──────────────────────────────────────────
+                // ── Network / Format / City ──────────────────────────────────
                 Tables\Columns\TextColumn::make('format')
                     ->label('Network / Format')
                     ->html()
@@ -35,40 +34,64 @@ class LineItemsRelationManager extends RelationManager
                         $top = $networkStr
                             ? '<div class="font-semibold text-gray-950 dark:text-white" style="white-space:normal;word-break:break-word;">' . e($networkStr) . '</div>'
                             : '';
-                        $bottom = '<div class="text-sm text-gray-500 dark:text-gray-400">' . e($record->format) . '</div>';
-                        return '<div style="max-width:320px;min-width:0;">' . $top . $bottom . '</div>';
+                        $mid = '<div class="text-sm text-gray-500 dark:text-gray-400">' . e($record->format) . '</div>';
+                        $bot = $record->city
+                            ? '<div class="text-xs text-gray-400">' . e($record->city) . '</div>'
+                            : '';
+                        return '<div style="max-width:320px;min-width:0;">' . $top . $mid . $bot . '</div>';
                     })())
                     ->searchable(false)
                     ->wrap(),
 
-                // ── Date range ────────────────────────────────────────────────
+                // ── Qty ─────────────────────────────────────────────────────
+                Tables\Columns\TextColumn::make('qty_screen')
+                    ->label('LCD')
+                    ->alignCenter()
+                    ->placeholder('—'),
+
+                // ── Weeks ───────────────────────────────────────────────────
+                Tables\Columns\TextColumn::make('total_weeks')
+                    ->label('Tuần')
+                    ->html()
+                    ->getStateUsing(fn (BookingLineItem $record) =>
+                        ($record->buy_weeks ?? 0) . '<span class="text-xs text-gray-400"> +' . ($record->foc_weeks ?? 0) . ' FOC</span>'
+                    )
+                    ->alignCenter(),
+
+                // ── Date range ──────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Thời gian')
                     ->html()
                     ->getStateUsing(fn (BookingLineItem $record) =>
-                        '<div class="tabular-nums text-sm">' . ($record->start_date?->format('d/m/Y') ?? '—') . '</div>'
-                        . '<div class="text-gray-400 dark:text-gray-500 text-xs text-center leading-none py-0.5">↓</div>'
-                        . '<div class="tabular-nums text-sm">' . ($record->end_date?->format('d/m/Y') ?? '—') . '</div>'
+                        '<span class="tabular-nums text-sm">' . ($record->start_date?->format('d/m/Y') ?? '—') . '</span>'
+                        . '<span class="text-gray-400 text-xs mx-1">→</span>'
+                        . '<span class="tabular-nums text-sm">' . ($record->end_date?->format('d/m/Y') ?? '—') . '</span>'
                     ),
 
-                // ── KPI ───────────────────────────────────────────────────────
-                Tables\Columns\TextColumn::make('guaranteed_units')
-                    ->label('KPI')
-                    ->formatStateUsing(fn ($state, BookingLineItem $record) =>
-                        number_format((float) $state, 0, ',', '.') . ' ' . strtoupper($record->unit)
-                    )
-                    ->alignEnd(),
-
-                // ── Ngân sách ─────────────────────────────────────────────────
+                // ── NET ─────────────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('line_budget')
-                    ->label('Ngân sách')
+                    ->label('NET')
                     ->money(fn (BookingLineItem $record) => $record->booking?->currency ?? 'VND')
                     ->alignEnd()
                     ->weight('bold'),
 
-                // ── Trạng thái mua ────────────────────────────────────────────
+                // ── GROSS ───────────────────────────────────────────────────
+                Tables\Columns\TextColumn::make('gross_amount')
+                    ->label('GROSS')
+                    ->money(fn (BookingLineItem $record) => $record->booking?->currency ?? 'VND')
+                    ->alignEnd()
+                    ->color('success'),
+
+                // ── Impression ──────────────────────────────────────────────
+                Tables\Columns\TextColumn::make('est_impression')
+                    ->label('Impression')
+                    ->numeric()
+                    ->alignEnd()
+                    ->placeholder('—'),
+
+                // ── Trạng thái mua ──────────────────────────────────────────
                 Tables\Columns\TextColumn::make('buying_status')
-                    ->label('Trạng thái mua')
+                    ->label('TT Mua')
                     ->badge()
                     ->formatStateUsing(fn ($state) => BookingLineItem::$buyingStatuses[$state] ?? $state)
                     ->color(fn ($state) => BookingLineItem::$buyingStatusColors[$state] ?? 'gray'),

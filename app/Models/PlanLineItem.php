@@ -15,17 +15,39 @@ class PlanLineItem extends Model
         'source',
         'format',
         'targeting',
+        // Location
+        'city',
+        'qty_location',
+        'qty_screen',
+        // Dates
         'start_date',
         'end_date',
         'live_days',
+        // Airing
+        'time_from',
+        'time_to',
+        'total_hours',
+        'sov',
+        'duration_seconds',
+        'frequency_minutes',
+        'daily_spots',
+        // Buying weeks
+        'buy_weeks',
+        'foc_weeks',
+        'total_weeks',
+        // Pricing
         'unit',
         'guaranteed_units',
         'unit_cost',
-        'daily_spots',
         'line_budget',
+        'gross_amount',
+        'vat_rate',
+        // KPI
         'est_impression',
         'est_impression_day',
         'est_ad_spot',
+        'kpi_multiplier',
+        // Status
         'status',
         'confirmed_by',
         'confirmed_at',
@@ -37,14 +59,19 @@ class PlanLineItem extends Model
     ];
 
     protected $casts = [
-        'targeting'       => 'array',
-        'start_date'      => 'date',
-        'end_date'        => 'date',
-        'guaranteed_units'=> 'decimal:2',
-        'unit_cost'       => 'decimal:2',
-        'line_budget'     => 'decimal:2',
-        'confirmed_at'    => 'datetime',
-        'rejected_at'     => 'datetime',
+        'targeting'         => 'array',
+        'start_date'        => 'date',
+        'end_date'          => 'date',
+        'guaranteed_units'  => 'decimal:2',
+        'unit_cost'         => 'decimal:2',
+        'line_budget'       => 'decimal:2',
+        'gross_amount'      => 'decimal:2',
+        'vat_rate'          => 'decimal:2',
+        'sov'               => 'decimal:2',
+        'total_hours'       => 'decimal:1',
+        'frequency_minutes' => 'decimal:1',
+        'confirmed_at'      => 'datetime',
+        'rejected_at'       => 'datetime',
     ];
 
     public static array $statuses = [
@@ -69,13 +96,36 @@ class PlanLineItem extends Model
         'adops' => 'primary',
     ];
 
-    // ─── Auto-calculate line_budget ───────────────────────────────────────────
+    // ─── Auto-calculate ──────────────────────────────────────────────────────
 
     protected static function booted(): void
     {
         $calc = function (PlanLineItem $item) {
-            if ($item->guaranteed_units !== null && $item->unit_cost !== null) {
+            // Total weeks
+            if ($item->buy_weeks !== null) {
+                $item->total_weeks = (int) $item->buy_weeks + (int) ($item->foc_weeks ?? 0);
+            }
+
+            // NET line_budget = unit_cost × buy_weeks × qty_screen
+            if ($item->unit_cost !== null && $item->buy_weeks !== null) {
+                $qty = max(1, (int) ($item->qty_screen ?? 1));
+                $item->line_budget = (float) $item->unit_cost * (int) $item->buy_weeks * $qty;
+            } elseif ($item->guaranteed_units !== null && $item->unit_cost !== null) {
                 $item->line_budget = (float) $item->guaranteed_units * (float) $item->unit_cost;
+            }
+
+            // GROSS = NET × (1 + VAT%)
+            $vatRate = (float) ($item->vat_rate ?? 8);
+            $item->gross_amount = (float) $item->line_budget * (1 + $vatRate / 100);
+
+            // KPI: est_ad_spot = daily_spots × qty_screen × total_weeks × 7
+            if ($item->daily_spots && $item->qty_screen && $item->total_weeks) {
+                $item->est_ad_spot = (int) $item->daily_spots * (int) $item->qty_screen * (int) $item->total_weeks * 7;
+            }
+
+            // est_impression = est_ad_spot × kpi_multiplier
+            if ($item->est_ad_spot && $item->kpi_multiplier) {
+                $item->est_impression = (int) $item->est_ad_spot * (int) $item->kpi_multiplier;
             }
         };
 
