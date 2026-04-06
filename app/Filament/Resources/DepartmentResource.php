@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DepartmentResource\Pages;
+use App\Filament\Resources\DepartmentResource\RelationManagers;
 use App\Models\Department;
 use App\Models\User;
 use Filament\Forms;
@@ -77,6 +78,7 @@ class DepartmentResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ]),
@@ -109,11 +111,19 @@ class DepartmentResource extends Resource
         return auth()->user()->hasPermissionTo('departments.delete');
     }
 
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\PositionsRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
             'index'  => Pages\ListDepartments::route('/'),
             'create' => Pages\CreateDepartment::route('/create'),
+            'view'   => Pages\ViewDepartment::route('/{record}'),
             'edit'   => Pages\EditDepartment::route('/{record}/edit'),
         ];
     }

@@ -32,6 +32,8 @@ class RolePermissionSeeder extends Seeder
         'expense_categories.viewAny', 'expense_categories.create', 'expense_categories.update', 'expense_categories.delete',
         // Phòng ban
         'departments.viewAny', 'departments.view', 'departments.create', 'departments.update', 'departments.delete',
+        // Vị trí phòng ban
+        'department_positions.viewAny', 'department_positions.create', 'department_positions.update', 'department_positions.delete',
         // Users
         'users.viewAny', 'users.view', 'users.create', 'users.update', 'users.delete',
         // Báo cáo

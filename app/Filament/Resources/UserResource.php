@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\Department;
+use App\Models\DepartmentPosition;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -99,6 +100,21 @@ class UserResource extends Resource
                     ->label('Phòng ban')
                     ->placeholder('—')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('primary_position')
+                    ->label('Chức vụ')
+                    ->getStateUsing(function (User $record) {
+                        $pos = $record->departmentPositions()
+                            ->where('is_primary', true)
+                            ->whereNull('left_at')
+                            ->first();
+                        return $pos ? (DepartmentPosition::$positions[$pos->position] ?? $pos->position) : null;
+                    })
+                    ->badge()
+                    ->color(function ($state) {
+                        $key = array_search($state, DepartmentPosition::$positions);
+                        return DepartmentPosition::$positionColors[$key] ?? 'gray';
+                    })
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Ngày tạo')
                     ->date('d/m/Y')

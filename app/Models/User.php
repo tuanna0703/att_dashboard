@@ -44,6 +44,48 @@ class User extends Authenticatable implements FilamentUser
         return $this->belongsToMany(Department::class, 'user_overseen_departments');
     }
 
+    /** Vị trí trong các phòng ban */
+    public function departmentPositions(): HasMany
+    {
+        return $this->hasMany(DepartmentPosition::class);
+    }
+
+    /** Phòng ban chính (is_primary) */
+    public function primaryPosition(): HasMany
+    {
+        return $this->hasMany(DepartmentPosition::class)->where('is_primary', true)->whereNull('left_at');
+    }
+
+    /** Kiểm tra user có phải trưởng phòng của dept nào không */
+    public function isDeptHead(?int $departmentId = null): bool
+    {
+        $query = $this->departmentPositions()->where('position', 'head')->whereNull('left_at');
+        if ($departmentId) {
+            $query->where('department_id', $departmentId);
+        }
+        return $query->exists();
+    }
+
+    /** Lấy danh sách user IDs cùng phòng ban (dùng cho scoping) */
+    public function getManagedUserIds(): array
+    {
+        $deptIds = $this->departmentPositions()
+            ->whereIn('position', ['head', 'deputy_head'])
+            ->whereNull('left_at')
+            ->pluck('department_id');
+
+        if ($deptIds->isEmpty()) {
+            return [$this->id];
+        }
+
+        return DepartmentPosition::whereIn('department_id', $deptIds)
+            ->whereNull('left_at')
+            ->pluck('user_id')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
+
     public function contractsAsSale(): HasMany
     {
         return $this->hasMany(Contract::class, 'sale_owner_id');

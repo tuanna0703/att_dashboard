@@ -33,4 +33,22 @@ class Department extends Model
     {
         return $this->belongsToMany(User::class, 'user_overseen_departments');
     }
+
+    /** Các vị trí trong phòng ban */
+    public function positions(): HasMany
+    {
+        return $this->hasMany(DepartmentPosition::class);
+    }
+
+    /** Trưởng phòng */
+    public function head(): HasMany
+    {
+        return $this->hasMany(DepartmentPosition::class)->where('position', 'head')->whereNull('left_at');
+    }
+
+    /** Nhân sự đang hoạt động trong phòng ban */
+    public function activePositions(): HasMany
+    {
+        return $this->hasMany(DepartmentPosition::class)->whereNull('left_at');
+    }
 }
