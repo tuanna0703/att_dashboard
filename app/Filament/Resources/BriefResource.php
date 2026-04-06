@@ -88,6 +88,7 @@ class BriefResource extends Resource
                     ->addActionLabel('+ Thêm line item')
                     ->defaultItems(0)
                     ->reorderable('sort_order')
+                    ->cloneable()
                     ->collapsible()
                     ->itemLabel(function (array $state): ?string {
                         $networkIds = $state['targeting'] ?? [];

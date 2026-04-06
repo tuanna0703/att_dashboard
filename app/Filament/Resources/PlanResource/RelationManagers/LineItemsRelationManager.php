@@ -216,6 +216,26 @@ class LineItemsRelationManager extends RelationManager
                             && $record->status === 'pending'
                         ),
 
+                    Tables\Actions\Action::make('duplicate')
+                        ->label('Duplicate')
+                        ->icon('heroicon-o-document-duplicate')
+                        ->color('gray')
+                        ->requiresConfirmation()
+                        ->modalHeading('Duplicate line item này?')
+                        ->action(function (PlanLineItem $record) {
+                            $fields = \App\Filament\Forms\LineItemSchema::fieldNames();
+                            $data   = ['plan_id' => $record->plan_id, 'status' => 'pending'];
+                            $data['created_by']         = auth()->id();
+                            $data['source']             = auth()->user()->hasRole('adops') ? 'adops' : 'sale';
+                            $data['brief_line_item_id'] = $record->brief_line_item_id;
+                            $data['sort_order']         = $record->plan->lineItems()->max('sort_order') + 1;
+                            foreach ($fields as $f) {
+                                $data[$f] = $record->{$f};
+                            }
+                            PlanLineItem::create($data);
+                            Notification::make()->title('Đã duplicate line item')->success()->send();
+                        }),
+
                     Tables\Actions\DeleteAction::make()
                         ->visible(fn (PlanLineItem $record) =>
                             $record->created_by === auth()->id()
