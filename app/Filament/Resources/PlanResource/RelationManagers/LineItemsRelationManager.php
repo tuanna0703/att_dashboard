@@ -85,7 +85,9 @@ class LineItemsRelationManager extends RelationManager
                         ->label('Số vị trí')
                         ->numeric()
                         ->default(1)
-                        ->minValue(1),
+                        ->minValue(1)
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn (Get $get, Set $set) => self::recalc($get, $set)),
                 ]),
                 Forms\Components\Grid::make(5)->schema([
                     Forms\Components\TextInput::make('qty_screen')
@@ -447,10 +449,10 @@ class LineItemsRelationManager extends RelationManager
         $totalWeeks = $buyWeeks + $focWeeks;
         $set('total_weeks', $totalWeeks);
 
-        // NET = unit_cost × buy_weeks × qty_screen
-        $unitCost  = (float) ($get('unit_cost') ?? 0);
-        $qtyScreen = max(1, (int) ($get('qty_screen') ?? 1));
-        $net       = $unitCost * $buyWeeks * $qtyScreen;
+        // NET = qty_location × buy_weeks × unit_cost
+        $unitCost    = (float) ($get('unit_cost') ?? 0);
+        $qtyLocation = max(1, (int) ($get('qty_location') ?? 1));
+        $net         = $qtyLocation * $buyWeeks * $unitCost;
         $set('line_budget', round($net, 2));
 
         // GROSS = NET × (1 + VAT%)

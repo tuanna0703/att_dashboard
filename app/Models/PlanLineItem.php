@@ -106,10 +106,10 @@ class PlanLineItem extends Model
                 $item->total_weeks = (int) $item->buy_weeks + (int) ($item->foc_weeks ?? 0);
             }
 
-            // NET line_budget = unit_cost × buy_weeks × qty_screen
+            // NET line_budget = qty_location × buy_weeks × unit_cost
             if ($item->unit_cost !== null && $item->buy_weeks !== null) {
-                $qty = max(1, (int) ($item->qty_screen ?? 1));
-                $item->line_budget = (float) $item->unit_cost * (int) $item->buy_weeks * $qty;
+                $qty = max(1, (int) ($item->qty_location ?? 1));
+                $item->line_budget = $qty * (int) $item->buy_weeks * (float) $item->unit_cost;
             } elseif ($item->guaranteed_units !== null && $item->unit_cost !== null) {
                 $item->line_budget = (float) $item->guaranteed_units * (float) $item->unit_cost;
             }
