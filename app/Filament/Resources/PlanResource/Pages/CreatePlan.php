@@ -277,13 +277,13 @@ class CreatePlan extends CreateRecord
                             // ── Section 2: Thời gian ────────────────────────
                             Forms\Components\Section::make('Thời gian phát sóng')->schema([
                                 Forms\Components\Grid::make(6)->schema([
-                                    Forms\Components\TimePicker::make('time_from')
+                                    Forms\Components\TextInput::make('time_from')
                                         ->label('Giờ phát')
-                                        ->seconds(false)
+                                        ->placeholder('08:00')
                                         ->default('08:00'),
-                                    Forms\Components\TimePicker::make('time_to')
+                                    Forms\Components\TextInput::make('time_to')
                                         ->label('Giờ kết thúc')
-                                        ->seconds(false)
+                                        ->placeholder('22:00')
                                         ->default('22:00'),
                                     Forms\Components\DatePicker::make('start_date')
                                         ->label('Ngày bắt đầu')
@@ -397,7 +397,6 @@ class CreatePlan extends CreateRecord
                         ->cloneable()
                         ->reorderable()
                         ->collapsible()
-                        ->live()
                         ->itemLabel(function (array $state): ?string {
                             $networkIds = $state['targeting'] ?? [];
                             if (is_string($networkIds)) {
@@ -411,24 +410,7 @@ class CreatePlan extends CreateRecord
                             return $parts ? implode(' — ', $parts) : 'Line item mới';
                         }),
 
-                    // ── Footer: tổng ngân sách ──────────────────────────────
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\Placeholder::make('net_display')
-                                ->label('Tổng NET')
-                                ->content(function (Get $get): HtmlString {
-                                    $total = collect($get('line_items') ?? [])->sum(fn ($i) => (float) ($i['line_budget'] ?? 0));
-                                    return new HtmlString('<span class="text-xl font-bold text-primary-600">' . ($total > 0 ? number_format($total, 0, ',', '.') . ' VND' : '—') . '</span>');
-                                }),
-                            Forms\Components\Placeholder::make('gross_display')
-                                ->label('Tổng GROSS (VAT)')
-                                ->content(function (Get $get): HtmlString {
-                                    $total = collect($get('line_items') ?? [])->sum(fn ($i) => (float) ($i['gross_amount'] ?? 0));
-                                    return new HtmlString('<span class="text-xl font-bold text-success-600">' . ($total > 0 ? number_format($total, 0, ',', '.') . ' VND' : '—') . '</span>');
-                                }),
-                        ])
-                        ->columnSpanFull()
-                        ->extraAttributes(['class' => 'border-t border-gray-200 dark:border-gray-700 pt-4 mt-2']),
+                    // Tổng ngân sách sẽ tự tính khi Plan được lưu
                 ]),
         ]);
     }

@@ -122,14 +122,14 @@ class LineItemsRelationManager extends RelationManager
             // ── Row 2: Airing & Dates ────────────────────────────────────────
             Forms\Components\Section::make('Thời gian phát sóng')->schema([
                 Forms\Components\Grid::make(6)->schema([
-                    Forms\Components\TimePicker::make('time_from')
+                    Forms\Components\TextInput::make('time_from')
                         ->label('Giờ phát')
-                        ->seconds(false)
+                        ->placeholder('08:00')
                         ->default('08:00'),
 
-                    Forms\Components\TimePicker::make('time_to')
+                    Forms\Components\TextInput::make('time_to')
                         ->label('Giờ kết thúc')
-                        ->seconds(false)
+                        ->placeholder('22:00')
                         ->default('22:00'),
 
                     Forms\Components\DatePicker::make('start_date')
