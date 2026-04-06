@@ -141,6 +141,21 @@ class RolePermissionSeeder extends Seeder
             'media_buying_orders.viewAny', 'media_buying_orders.view',
         ]);
 
+        // ─── Sale Manager: Quản lý đội sale, xem tất cả brief/plan/booking ───
+        $saleManager = Role::firstOrCreate(['name' => 'sale_manager', 'guard_name' => 'web']);
+        $saleManager->syncPermissions([
+            'customers.viewAny', 'customers.view', 'customers.create', 'customers.update', 'customers.delete',
+            'customer_contacts.viewAny', 'customer_contacts.create', 'customer_contacts.update', 'customer_contacts.delete',
+            'contracts.viewAny', 'contracts.view', 'contracts.create', 'contracts.update',
+            'ad_networks.viewAny',
+            'screens.viewAny',
+            'briefs.viewAny', 'briefs.view', 'briefs.create', 'briefs.update', 'briefs.delete',
+            'plans.viewAny', 'plans.view',
+            'bookings.viewAny', 'bookings.view', 'bookings.update',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
+            'reports.viewDepartment',
+        ]);
+
         // ─── Sale: Quản lý Brief, theo dõi Booking, tạo Contract ─────────────
         $sale = Role::firstOrCreate(['name' => 'sale', 'guard_name' => 'web']);
         $sale->syncPermissions([
@@ -213,7 +228,7 @@ class RolePermissionSeeder extends Seeder
         $this->seedDefaultUsers($financeDept, $salesDept, $adsDept);
 
         $this->command->info('✅ Roles, Permissions, Departments, và default users đã được tạo.');
-        $allRoles = ['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff', 'sale', 'adops', 'mbo_manager', 'media_buyer'];
+        $allRoles = ['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff', 'sale_manager', 'sale', 'adops', 'mbo_manager', 'media_buyer'];
         $this->command->table(
             ['Role', 'Permissions'],
             collect($allRoles)->map(fn ($r) => [
