@@ -130,18 +130,24 @@ class PlanLineItem extends Model
                 if ($item->buy_weeks !== null) {
                     $item->total_weeks = (int) $item->buy_weeks + (int) ($item->foc_weeks ?? 0);
                 }
-                // NET = qty_location × buy_weeks × unit_cost
+                // NET = qty_screen × unit_cost × buy_weeks
                 if ($item->unit_cost !== null && $item->buy_weeks !== null) {
-                    $qty = max(1, (int) ($item->qty_location ?? 1));
-                    $item->line_budget = $qty * (int) $item->buy_weeks * (float) $item->unit_cost;
+                    $qtyScreen = max(1, (int) ($item->qty_screen ?? 1));
+                    $item->line_budget = $qtyScreen * (float) $item->unit_cost * (int) $item->buy_weeks;
                 }
                 // Ad Spots = daily_spots × qty_screen × total_weeks × 7
-                if ($item->daily_spots && $item->qty_screen && $item->total_weeks) {
-                    $item->est_ad_spot = (int) $item->daily_spots * (int) $item->qty_screen * (int) $item->total_weeks * 7;
+                $qtyScreen = max(1, (int) ($item->qty_screen ?? 1));
+                if ($item->daily_spots && $item->total_weeks) {
+                    $item->est_ad_spot = (int) $item->daily_spots * $qtyScreen * (int) $item->total_weeks * 7;
                 }
                 // Impression = ad_spot × multiplier
-                if ($item->est_ad_spot && $item->kpi_multiplier) {
-                    $item->est_impression = (int) $item->est_ad_spot * (int) $item->kpi_multiplier;
+                $multiplier = max(1, (int) ($item->kpi_multiplier ?? 1));
+                if ($item->est_ad_spot) {
+                    $item->est_impression = (int) $item->est_ad_spot * $multiplier;
+                }
+                // Impression/Day = spots/day × multiplier × qty_screen
+                if ($item->daily_spots) {
+                    $item->est_impression_day = (int) $item->daily_spots * $multiplier * $qtyScreen;
                 }
             }
 

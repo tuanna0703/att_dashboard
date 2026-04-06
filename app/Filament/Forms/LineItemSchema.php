@@ -7,6 +7,7 @@ use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Support\RawJs;
 
 /**
  * Shared OOH line item form schema — supports both I/O Booking and CPM modes.
@@ -31,6 +32,20 @@ class LineItemSchema
 
     private static function ioSchema(bool $withNotes, bool $withHidden): array
     {
+        $moneyMask = RawJs::make('$money($input, \',\', \'.\', 0)');
+        $dehydrateMoney = fn ($state) => (float) str_replace('.', '', (string) ($state ?? 0));
+        $hydrateMoney   = function ($component, $state) {
+            if ($state !== null && $state !== '' && $state != 0) {
+                $component->state(number_format((float) $state, 0, ',', '.'));
+            }
+        };
+        $formatNumber = function ($component, $state) {
+            if ($state !== null && $state !== '' && $state != 0) {
+                $component->state(number_format((int) $state, 0, ',', '.'));
+            }
+        };
+        $dehydrateNumber = fn ($state) => $state ? (int) str_replace(['.', ','], '', (string) $state) : null;
+
         $fields = [
             // ── 1. Network ───────────────────────────────────────────────────
             Forms\Components\Section::make('Network')->schema([
@@ -118,18 +133,22 @@ class LineItemSchema
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('unit_cost')
                         ->label('Đơn giá / Tuần')
-                        ->numeric()
+                        ->mask($moneyMask)
                         ->prefix('₫')
+                        ->dehydrateStateUsing($dehydrateMoney)
+                        ->afterStateHydrated($hydrateMoney)
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
                 ]),
                 Forms\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('line_budget')
                         ->label('NET Total')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->prefix('₫')
+                        ->dehydrateStateUsing($dehydrateMoney)
+                        ->afterStateHydrated($hydrateMoney)
                         ->disabled()
-                        ->dehydrated(true)
-                        ->prefix('₫'),
+                        ->dehydrated(true),
                     Forms\Components\TextInput::make('vat_rate')
                         ->label('VAT')
                         ->numeric()
@@ -139,10 +158,12 @@ class LineItemSchema
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
                     Forms\Components\TextInput::make('gross_amount')
                         ->label('GROSS Total (VAT)')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->prefix('₫')
+                        ->dehydrateStateUsing($dehydrateMoney)
+                        ->afterStateHydrated($hydrateMoney)
                         ->disabled()
-                        ->dehydrated(true)
-                        ->prefix('₫'),
+                        ->dehydrated(true),
                 ]),
             ])->compact(),
 
@@ -169,7 +190,9 @@ class LineItemSchema
                 Forms\Components\Grid::make(4)->schema([
                     Forms\Components\TextInput::make('est_ad_spot')
                         ->label('Ad Spots')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
                         ->disabled()
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('kpi_multiplier')
@@ -180,12 +203,18 @@ class LineItemSchema
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
                     Forms\Components\TextInput::make('est_impression')
                         ->label('Impression')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
                         ->disabled()
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('est_impression_day')
                         ->label('Impression/Day')
-                        ->numeric(),
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
+                        ->disabled()
+                        ->dehydrated(true),
                 ]),
             ])->compact(),
         ];
@@ -364,20 +393,26 @@ class LineItemSchema
         $totalWeeks = $buyWeeks + $focWeeks;
         $set('total_weeks', $totalWeeks);
 
-        $unitCost    = (float) ($get('unit_cost') ?? 0);
-        $qtyLocation = max(1, (int) ($get('qty_location') ?? 1));
-        $net         = $qtyLocation * $buyWeeks * $unitCost;
+        // NET = Số màn hình × Đơn giá/tuần × Tuần mua
+        $unitCost  = (float) ($get('unit_cost') ?? 0);
+        $qtyScreen = max(1, (int) ($get('qty_screen') ?? 1));
+        $net       = $qtyScreen * $unitCost * $buyWeeks;
         $set('line_budget', round($net, 2));
 
         $vatRate = (float) ($get('vat_rate') ?? 8);
         $set('gross_amount', round($net * (1 + $vatRate / 100), 2));
 
+        // Ad Spots = daily_spots × qty_screen × total_weeks × 7
         $dailySpots = (int) ($get('daily_spots') ?? 0);
-        $qtyScreen  = max(1, (int) ($get('qty_screen') ?? 1));
         $adSpots    = $dailySpots * $qtyScreen * $totalWeeks * 7;
         $set('est_ad_spot', $adSpots);
 
+        // Impression/Day = spots/day × multiplier × qty_screen
         $multiplier = max(1, (int) ($get('kpi_multiplier') ?? 1));
+        $impressionDay = $dailySpots * $multiplier * $qtyScreen;
+        $set('est_impression_day', $impressionDay);
+
+        // Impression = ad_spots × multiplier
         $set('est_impression', $adSpots * $multiplier);
     }
 
