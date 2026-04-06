@@ -32,55 +32,25 @@ class LineItemSchema
     private static function ioSchema(bool $withNotes, bool $withHidden): array
     {
         $fields = [
-            Forms\Components\Section::make('Vị trí & Network')->schema([
-                Forms\Components\Grid::make(5)->schema([
+            // ── 1. Network ───────────────────────────────────────────────────
+            Forms\Components\Section::make('Network')->schema([
+                Forms\Components\Grid::make(3)->schema([
                     Forms\Components\Select::make('targeting')
                         ->label('Network')
                         ->options(fn () => AdNetwork::where('is_active', true)->orderBy('name')->pluck('name', 'id'))
                         ->multiple()
                         ->searchable()
-                        ->preload()
-                        ->columnSpan(2),
+                        ->preload(),
                     Forms\Components\Select::make('format')
-                        ->label('Ad Form')
-                        ->options(['LCD' => 'LCD', 'LED' => 'LED', 'Standee' => 'Standee', 'Poster' => 'Poster', '6s' => '6s', '15s' => '15s', '30s' => '30s'])
+                        ->label('Screen Type')
+                        ->options(['LCD' => 'LCD', 'LED' => 'LED', 'Standee' => 'Standee', 'Poster' => 'Poster'])
                         ->searchable(),
                     Forms\Components\TextInput::make('city')
-                        ->label('Thành phố'),
-                    Forms\Components\TextInput::make('qty_location')
-                        ->label('Số vị trí')
-                        ->numeric()
-                        ->default(1)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
-                ]),
-                Forms\Components\Grid::make(5)->schema([
-                    Forms\Components\TextInput::make('qty_screen')
-                        ->label('Số LCD')
-                        ->numeric()
-                        ->default(1)
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
-                    Forms\Components\TextInput::make('duration_seconds')
-                        ->label('TVC (giây)')
-                        ->numeric()
-                        ->default(15)
-                        ->suffix('s'),
-                    Forms\Components\TextInput::make('daily_spots')
-                        ->label('Spot/ngày')
-                        ->numeric()
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
-                    Forms\Components\TextInput::make('sov')
-                        ->label('SOV')
-                        ->numeric()
-                        ->suffix('%'),
-                    Forms\Components\TextInput::make('frequency_minutes')
-                        ->label('Tần suất (phút)')
-                        ->numeric(),
+                        ->label('Vị trí'),
                 ]),
             ])->compact(),
 
+            // ── 2. Thời gian phát sóng ───────────────────────────────────────
             Forms\Components\Section::make('Thời gian phát sóng')->schema([
                 Forms\Components\Grid::make(6)->schema([
                     Forms\Components\TextInput::make('time_from')
@@ -115,8 +85,21 @@ class LineItemSchema
                 ]),
             ])->compact(),
 
+            // ── 3. Mua & Giá ─────────────────────────────────────────────────
             Forms\Components\Section::make('Mua & Giá')->schema([
                 Forms\Components\Grid::make(6)->schema([
+                    Forms\Components\TextInput::make('qty_location')
+                        ->label('Số vị trí')
+                        ->numeric()
+                        ->default(1)
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
+                    Forms\Components\TextInput::make('qty_screen')
+                        ->label('Số màn hình')
+                        ->numeric()
+                        ->default(1)
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
                     Forms\Components\TextInput::make('buy_weeks')
                         ->label('Tuần mua')
                         ->numeric()
@@ -139,6 +122,8 @@ class LineItemSchema
                         ->prefix('₫')
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
+                ]),
+                Forms\Components\Grid::make(3)->schema([
                     Forms\Components\TextInput::make('line_budget')
                         ->label('NET Total')
                         ->numeric()
@@ -152,8 +137,6 @@ class LineItemSchema
                         ->suffix('%')
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
-                ]),
-                Forms\Components\Grid::make(6)->schema([
                     Forms\Components\TextInput::make('gross_amount')
                         ->label('GROSS Total (VAT)')
                         ->numeric()
@@ -163,7 +146,26 @@ class LineItemSchema
                 ]),
             ])->compact(),
 
-            Forms\Components\Section::make('KPI Impressions')->schema([
+            // ── 4. KPI ───────────────────────────────────────────────────────
+            Forms\Components\Section::make('KPI')->schema([
+                Forms\Components\Grid::make(4)->schema([
+                    Forms\Components\Select::make('duration_seconds')
+                        ->label('TVC (giây)')
+                        ->options(['6' => '6s', '15' => '15s', '30' => '30s'])
+                        ->default('15'),
+                    Forms\Components\TextInput::make('daily_spots')
+                        ->label('Spots/Ngày')
+                        ->numeric()
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcIO($get, $set)),
+                    Forms\Components\TextInput::make('sov')
+                        ->label('SOV')
+                        ->numeric()
+                        ->suffix('%'),
+                    Forms\Components\TextInput::make('frequency_minutes')
+                        ->label('Tần suất (phút)')
+                        ->numeric(),
+                ]),
                 Forms\Components\Grid::make(4)->schema([
                     Forms\Components\TextInput::make('est_ad_spot')
                         ->label('Ad Spots')
