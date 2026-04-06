@@ -90,6 +90,7 @@ class BriefResource extends Resource
                     ->reorderable('sort_order')
                     ->cloneable()
                     ->collapsible()
+                    ->live()
                     ->itemLabel(function (array $state): ?string {
                         $networkIds = $state['targeting'] ?? [];
                         if (is_string($networkIds)) {
@@ -103,15 +104,50 @@ class BriefResource extends Resource
                         return $parts ? implode(' — ', $parts) : 'Line item mới';
                     }),
 
-                Forms\Components\Grid::make(2)
+                // ── Tổng hợp ─────────────────────────────────────────────────
+                Forms\Components\Grid::make(4)
                     ->schema([
                         Forms\Components\Select::make('currency')
                             ->label('Tiền tệ')
                             ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
                             ->default('VND')
-                            ->required(),
+                            ->required()
+                            ->live(),
+
+                        Forms\Components\Placeholder::make('summary_net')
+                            ->label('Tổng NET')
+                            ->content(function (Get $get) {
+                                $items    = $get('briefLineItems') ?? [];
+                                $currency = $get('currency') ?? 'VND';
+                                $total    = collect($items)->sum(fn ($i) => LineItemSchema::parseMoney($i['line_budget'] ?? 0));
+                                return $total > 0
+                                    ? number_format($total, 0, ',', '.') . ' ' . $currency
+                                    : '—';
+                            }),
+
+                        Forms\Components\Placeholder::make('summary_gross')
+                            ->label('Tổng GROSS (VAT)')
+                            ->content(function (Get $get) {
+                                $items    = $get('briefLineItems') ?? [];
+                                $currency = $get('currency') ?? 'VND';
+                                $total    = collect($items)->sum(fn ($i) => LineItemSchema::parseMoney($i['gross_amount'] ?? 0));
+                                return $total > 0
+                                    ? number_format($total, 0, ',', '.') . ' ' . $currency
+                                    : '—';
+                            }),
+
+                        Forms\Components\Placeholder::make('summary_impression')
+                            ->label('Tổng Impression')
+                            ->content(function (Get $get) {
+                                $items = $get('briefLineItems') ?? [];
+                                $total = collect($items)->sum(fn ($i) => LineItemSchema::parseMoney($i['est_impression'] ?? 0));
+                                return $total > 0
+                                    ? number_format($total, 0, ',', '.')
+                                    : '—';
+                            }),
                     ])
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->extraAttributes(['class' => 'border-t border-gray-200 dark:border-gray-700 pt-4 mt-2']),
             ]),
 
             Forms\Components\Section::make('Chi tiết yêu cầu')->schema([

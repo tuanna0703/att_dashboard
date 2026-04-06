@@ -411,7 +411,7 @@ class LineItemSchema
     /**
      * Parse a money-masked string like "1.234.567" back to float.
      */
-    private static function parseMoney($value): float
+    public static function parseMoney($value): float
     {
         if ($value === null || $value === '') return 0;
         return (float) str_replace(['.', ','], ['', '.'], (string) $value);
