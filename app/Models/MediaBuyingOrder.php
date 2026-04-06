@@ -66,9 +66,14 @@ class MediaBuyingOrder extends Model
     {
         static::creating(function (MediaBuyingOrder $order) {
             if (empty($order->order_no)) {
-                $year  = now()->format('Y');
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $order->order_no = 'MBO-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                $year   = now()->format('Y');
+                $prefix = 'MBO-' . $year . '-';
+                $last   = static::withTrashed()
+                    ->where('order_no', 'like', $prefix . '%')
+                    ->orderByRaw('CAST(SUBSTRING(order_no, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+                    ->value('order_no');
+                $next   = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+                $order->order_no = $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
         });
     }

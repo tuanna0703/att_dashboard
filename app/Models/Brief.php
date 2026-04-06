@@ -60,9 +60,14 @@ class Brief extends Model
     {
         static::creating(function (Brief $brief) {
             if (empty($brief->brief_no)) {
-                $year  = now()->format('Y');
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $brief->brief_no = 'BRF-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                $year   = now()->format('Y');
+                $prefix = 'BRF-' . $year . '-';
+                $last   = static::withTrashed()
+                    ->where('brief_no', 'like', $prefix . '%')
+                    ->orderByRaw('CAST(SUBSTRING(brief_no, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+                    ->value('brief_no');
+                $next   = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+                $brief->brief_no = $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
         });
     }

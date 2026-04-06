@@ -222,12 +222,17 @@ class BookingResource extends Resource
 
     public static function createContractFromBooking(Booking $booking): Contract
     {
-        $year  = now()->format('Y');
-        $count = Contract::whereYear('created_at', $year)->withTrashed()->count() + 1;
+        $year   = now()->format('Y');
+        $prefix = 'HĐ-' . $year . '-';
+        $last   = Contract::withTrashed()
+            ->where('contract_code', 'like', $prefix . '%')
+            ->orderByRaw('CAST(SUBSTRING(contract_code, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+            ->value('contract_code');
+        $next   = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
 
         $contract = Contract::create([
             'booking_id'            => $booking->id,
-            'contract_code'         => 'HĐ-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT),
+            'contract_code'         => $prefix . str_pad($next, 4, '0', STR_PAD_LEFT),
             'contract_type'         => 'ads',
             'name'                  => $booking->campaign_name,
             'customer_id'           => $booking->customer_id,

@@ -70,9 +70,14 @@ class Booking extends Model
     {
         static::creating(function (Booking $booking) {
             if (empty($booking->booking_no)) {
-                $year  = now()->format('Y');
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $booking->booking_no = 'BKG-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                $year   = now()->format('Y');
+                $prefix = 'BKG-' . $year . '-';
+                $last   = static::withTrashed()
+                    ->where('booking_no', 'like', $prefix . '%')
+                    ->orderByRaw('CAST(SUBSTRING(booking_no, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+                    ->value('booking_no');
+                $next   = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+                $booking->booking_no = $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
         });
     }

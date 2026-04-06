@@ -55,9 +55,14 @@ class Plan extends Model
     {
         static::creating(function (Plan $plan) {
             if (empty($plan->plan_no)) {
-                $year  = now()->format('Y');
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $plan->plan_no = 'PLN-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                $year   = now()->format('Y');
+                $prefix = 'PLN-' . $year . '-';
+                $last   = static::withTrashed()
+                    ->where('plan_no', 'like', $prefix . '%')
+                    ->orderByRaw('CAST(SUBSTRING(plan_no, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+                    ->value('plan_no');
+                $next   = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+                $plan->plan_no = $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
 
             if (empty($plan->version)) {

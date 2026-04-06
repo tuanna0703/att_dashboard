@@ -58,9 +58,14 @@ class Expense extends Model
     {
         static::creating(function (Expense $expense) {
             if (empty($expense->expense_no)) {
-                $year  = now()->format('Y');
-                $count = static::whereYear('created_at', $year)->count() + 1;
-                $expense->expense_no = 'PC-' . $year . '-' . str_pad($count, 4, '0', STR_PAD_LEFT);
+                $year   = now()->format('Y');
+                $prefix = 'PC-' . $year . '-';
+                $last   = static::withTrashed()
+                    ->where('expense_no', 'like', $prefix . '%')
+                    ->orderByRaw('CAST(SUBSTRING(expense_no, ' . (strlen($prefix) + 1) . ') AS UNSIGNED) DESC')
+                    ->value('expense_no');
+                $next   = $last ? ((int) substr($last, strlen($prefix))) + 1 : 1;
+                $expense->expense_no = $prefix . str_pad($next, 4, '0', STR_PAD_LEFT);
             }
         });
     }
