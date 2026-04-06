@@ -63,16 +63,20 @@ class BriefResource extends Resource
             ]),
 
             Forms\Components\Section::make('Line Items')->schema([
-                Forms\Components\Select::make('buying_model')
+                Forms\Components\ToggleButtons::make('buying_model')
                     ->label('Loại mua')
                     ->options([
                         'io'  => 'I/O Booking (OOH)',
                         'cpm' => 'CPM (Programmatic)',
                     ])
+                    ->icons([
+                        'io'  => 'heroicon-o-tv',
+                        'cpm' => 'heroicon-o-cursor-arrow-ripple',
+                    ])
                     ->default('io')
                     ->required()
                     ->live()
-                    ->columnSpanFull(),
+                    ->inline(),
 
                 Forms\Components\Repeater::make('briefLineItems')
                     ->relationship('briefLineItems')
