@@ -504,6 +504,7 @@ class CreatePlan extends CreateRecord
 
         // Ad Spots = daily_spots × qty_screen × total_weeks × 7
         $dailySpots = (int) ($get('daily_spots') ?? 0);
+        $qtyScreen  = max(1, (int) ($get('qty_screen') ?? 1));
         $adSpots    = $dailySpots * $qtyScreen * $totalWeeks * 7;
         $set('est_ad_spot', $adSpots);
 
