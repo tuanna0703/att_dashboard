@@ -63,20 +63,28 @@ class BriefResource extends Resource
             ]),
 
             Forms\Components\Section::make('Line Items')->schema([
-                Forms\Components\ToggleButtons::make('buying_model')
-                    ->label('Loại mua')
-                    ->options([
-                        'io'  => 'I/O Booking (OOH)',
-                        'cpm' => 'CPM (Programmatic)',
-                    ])
-                    ->icons([
-                        'io'  => 'heroicon-o-tv',
-                        'cpm' => 'heroicon-o-cursor-arrow-ripple',
-                    ])
-                    ->default('io')
-                    ->required()
-                    ->live()
-                    ->inline(),
+                Forms\Components\Grid::make(2)->schema([
+                    Forms\Components\ToggleButtons::make('buying_model')
+                        ->label('Loại mua')
+                        ->options([
+                            'io'  => 'I/O Booking (OOH)',
+                            'cpm' => 'CPM (Programmatic)',
+                        ])
+                        ->icons([
+                            'io'  => 'heroicon-o-tv',
+                            'cpm' => 'heroicon-o-cursor-arrow-ripple',
+                        ])
+                        ->default('io')
+                        ->required()
+                        ->live()
+                        ->inline(),
+                    Forms\Components\Select::make('currency')
+                        ->label('Tiền tệ')
+                        ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
+                        ->default('VND')
+                        ->required()
+                        ->live(),
+                ]),
 
                 Forms\Components\Repeater::make('briefLineItems')
                     ->relationship('briefLineItems')
@@ -105,15 +113,8 @@ class BriefResource extends Resource
                     }),
 
                 // ── Tổng hợp ─────────────────────────────────────────────────
-                Forms\Components\Grid::make(4)
+                Forms\Components\Grid::make(3)
                     ->schema([
-                        Forms\Components\Select::make('currency')
-                            ->label('Tiền tệ')
-                            ->options(['VND' => 'VND (₫)', 'USD' => 'USD ($)'])
-                            ->default('VND')
-                            ->required()
-                            ->live(),
-
                         Forms\Components\Placeholder::make('summary_net')
                             ->label('Tổng NET')
                             ->content(function (Get $get) {
