@@ -6,6 +6,7 @@ use App\Models\AdNetwork;
 use App\Models\BriefLineItem;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -74,12 +75,27 @@ class BriefLineItemsRelationManager extends RelationManager
                     ->alignEnd(),
 
                 TextColumn::make('line_budget')
-                    ->label('Budget')
-                    ->formatStateUsing(fn ($state, $record) => $state
-                        ? number_format((float) $state, 0, ',', '.') . ' ' . ($record->brief?->currency ?? 'VND')
-                        : '—')
+                    ->label('NET')
+                    ->money(fn ($record) => $record->brief?->currency ?? 'VND')
                     ->weight('bold')
-                    ->alignEnd(),
+                    ->alignEnd()
+                    ->summarize(Sum::make()->label('Tổng NET')
+                        ->money(fn () => $this->getOwnerRecord()->currency ?? 'VND')),
+
+                TextColumn::make('gross_amount')
+                    ->label('GROSS')
+                    ->money(fn ($record) => $record->brief?->currency ?? 'VND')
+                    ->alignEnd()
+                    ->color('success')
+                    ->summarize(Sum::make()->label('Tổng GROSS')
+                        ->money(fn () => $this->getOwnerRecord()->currency ?? 'VND')),
+
+                TextColumn::make('est_impression')
+                    ->label('Impression')
+                    ->numeric()
+                    ->alignEnd()
+                    ->placeholder('—')
+                    ->summarize(Sum::make()->label('Tổng')->numeric()),
             ])
             ->actions([
                 Tables\Actions\Action::make('view_kpi')

@@ -5,6 +5,7 @@ namespace App\Filament\Resources\BookingResource\RelationManagers;
 use App\Models\BookingLineItem;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
+use Filament\Tables\Columns\Summarizers\Sum;
 use Filament\Tables\Table;
 
 class LineItemsRelationManager extends RelationManager
@@ -47,7 +48,8 @@ class LineItemsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('qty_screen')
                     ->label('LCD')
                     ->alignCenter()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->summarize(Sum::make()->label('Tổng')),
 
                 // ── Weeks ───────────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('total_weeks')
@@ -73,21 +75,26 @@ class LineItemsRelationManager extends RelationManager
                     ->label('NET')
                     ->money(fn (BookingLineItem $record) => $record->booking?->currency ?? 'VND')
                     ->alignEnd()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->summarize(Sum::make()->label('Tổng NET')
+                        ->money(fn () => $this->getOwnerRecord()->currency ?? 'VND')),
 
                 // ── GROSS ───────────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('gross_amount')
                     ->label('GROSS')
                     ->money(fn (BookingLineItem $record) => $record->booking?->currency ?? 'VND')
                     ->alignEnd()
-                    ->color('success'),
+                    ->color('success')
+                    ->summarize(Sum::make()->label('Tổng GROSS')
+                        ->money(fn () => $this->getOwnerRecord()->currency ?? 'VND')),
 
                 // ── Impression ──────────────────────────────────────────────
                 Tables\Columns\TextColumn::make('est_impression')
                     ->label('Impression')
                     ->numeric()
                     ->alignEnd()
-                    ->placeholder('—'),
+                    ->placeholder('—')
+                    ->summarize(Sum::make()->label('Tổng')->numeric()),
 
                 // ── Trạng thái mua ──────────────────────────────────────────
                 Tables\Columns\TextColumn::make('buying_status')
