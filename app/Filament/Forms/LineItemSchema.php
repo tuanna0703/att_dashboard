@@ -226,6 +226,20 @@ class LineItemSchema
 
     private static function cpmSchema(bool $withNotes, bool $withHidden): array
     {
+        $moneyMask = RawJs::make('$money($input, \',\', \'.\', 0)');
+        $dehydrateMoney = fn ($state) => (float) str_replace('.', '', (string) ($state ?? 0));
+        $hydrateMoney   = function ($component, $state) {
+            if ($state !== null && $state !== '' && $state != 0) {
+                $component->state(number_format((float) $state, 0, ',', '.'));
+            }
+        };
+        $formatNumber = function ($component, $state) {
+            if ($state !== null && $state !== '' && $state != 0) {
+                $component->state(number_format((int) $state, 0, ',', '.'));
+            }
+        };
+        $dehydrateNumber = fn ($state) => $state ? (int) str_replace(['.', ','], '', (string) $state) : null;
+
         $fields = [
             Forms\Components\Section::make('Platform & Targeting')->schema([
                 Forms\Components\Grid::make(5)->schema([
@@ -277,7 +291,9 @@ class LineItemSchema
                         ->default('cpm'),
                     Forms\Components\TextInput::make('guaranteed_units')
                         ->label('Guaranteed Units')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
                         ->required()
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcCPM($get, $set)),
@@ -288,13 +304,17 @@ class LineItemSchema
                 Forms\Components\Grid::make(4)->schema([
                     Forms\Components\TextInput::make('unit_cost')
                         ->label('Unit Cost (Rate)')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateMoney)
+                        ->afterStateHydrated($hydrateMoney)
                         ->required()
                         ->live(onBlur: true)
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcCPM($get, $set)),
                     Forms\Components\TextInput::make('line_budget')
                         ->label('Budget (NET)')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateMoney)
+                        ->afterStateHydrated($hydrateMoney)
                         ->disabled()
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('vat_rate')
@@ -306,7 +326,9 @@ class LineItemSchema
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcCPM($get, $set)),
                     Forms\Components\TextInput::make('gross_amount')
                         ->label('GROSS (VAT)')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateMoney)
+                        ->afterStateHydrated($hydrateMoney)
                         ->disabled()
                         ->dehydrated(true),
                 ]),
@@ -316,12 +338,16 @@ class LineItemSchema
                 Forms\Components\Grid::make(4)->schema([
                     Forms\Components\TextInput::make('est_impression')
                         ->label('Impression')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
                         ->disabled()
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('est_impression_day')
                         ->label('Est Impression/Day')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
                         ->disabled()
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('kpi_multiplier')
@@ -332,7 +358,9 @@ class LineItemSchema
                         ->afterStateUpdated(fn (Get $get, Set $set) => static::recalcCPM($get, $set)),
                     Forms\Components\TextInput::make('est_ad_spot')
                         ->label('Est Ad Spot')
-                        ->numeric()
+                        ->mask($moneyMask)
+                        ->dehydrateStateUsing($dehydrateNumber)
+                        ->afterStateHydrated($formatNumber)
                         ->disabled()
                         ->dehydrated(true),
                 ]),
@@ -380,6 +408,25 @@ class LineItemSchema
 
     // ─── I/O Recalc ──────────────────────────────────────────────────────────
 
+    /**
+     * Parse a money-masked string like "1.234.567" back to float.
+     */
+    private static function parseMoney($value): float
+    {
+        if ($value === null || $value === '') return 0;
+        return (float) str_replace(['.', ','], ['', '.'], (string) $value);
+    }
+
+    private static function fmtMoney(float $value): string
+    {
+        return number_format($value, 0, ',', '.');
+    }
+
+    private static function fmtInt(int $value): string
+    {
+        return number_format($value, 0, ',', '.');
+    }
+
     public static function recalcIO(Get $get, Set $set): void
     {
         $start = $get('start_date');
@@ -394,26 +441,27 @@ class LineItemSchema
         $set('total_weeks', $totalWeeks);
 
         // NET = Số màn hình × Đơn giá/tuần × Tuần mua
-        $unitCost  = (float) ($get('unit_cost') ?? 0);
+        $unitCost  = static::parseMoney($get('unit_cost'));
         $qtyScreen = max(1, (int) ($get('qty_screen') ?? 1));
         $net       = $qtyScreen * $unitCost * $buyWeeks;
-        $set('line_budget', round($net, 2));
+        $set('line_budget', static::fmtMoney($net));
 
         $vatRate = (float) ($get('vat_rate') ?? 8);
-        $set('gross_amount', round($net * (1 + $vatRate / 100), 2));
+        $gross   = $net * (1 + $vatRate / 100);
+        $set('gross_amount', static::fmtMoney($gross));
 
         // Ad Spots = daily_spots × qty_screen × total_weeks × 7
         $dailySpots = (int) ($get('daily_spots') ?? 0);
         $adSpots    = $dailySpots * $qtyScreen * $totalWeeks * 7;
-        $set('est_ad_spot', $adSpots);
+        $set('est_ad_spot', static::fmtInt($adSpots));
 
         // Impression/Day = spots/day × multiplier × qty_screen
-        $multiplier = max(1, (int) ($get('kpi_multiplier') ?? 1));
+        $multiplier    = max(1, (int) ($get('kpi_multiplier') ?? 1));
         $impressionDay = $dailySpots * $multiplier * $qtyScreen;
-        $set('est_impression_day', $impressionDay);
+        $set('est_impression_day', static::fmtInt($impressionDay));
 
         // Impression = ad_spots × multiplier
-        $set('est_impression', $adSpots * $multiplier);
+        $set('est_impression', static::fmtInt($adSpots * $multiplier));
     }
 
     // ─── CPM Recalc ──────────────────────────────────────────────────────────
@@ -428,26 +476,28 @@ class LineItemSchema
             $set('live_days', $liveDays);
         }
 
-        $guaranteed = (float) ($get('guaranteed_units') ?? 0);
-        $unitCost   = (float) ($get('unit_cost') ?? 0);
+        $guaranteed = static::parseMoney($get('guaranteed_units'));
+        $unitCost   = static::parseMoney($get('unit_cost'));
 
         // NET = guaranteed_units × unit_cost
         $net = $guaranteed * $unitCost;
-        $set('line_budget', round($net, 2));
+        $set('line_budget', static::fmtMoney($net));
 
         // GROSS
         $vatRate = (float) ($get('vat_rate') ?? 8);
-        $set('gross_amount', round($net * (1 + $vatRate / 100), 2));
+        $set('gross_amount', static::fmtMoney($net * (1 + $vatRate / 100)));
 
         // Impression = guaranteed_units × 1000
         $impression = (int) ($guaranteed * 1000);
-        $set('est_impression', $impression);
+        $set('est_impression', static::fmtInt($impression));
 
         // Impression/day
-        $set('est_impression_day', $liveDays > 0 ? (int) round($impression / $liveDays) : 0);
+        $impDay = $liveDays > 0 ? (int) round($impression / $liveDays) : 0;
+        $set('est_impression_day', static::fmtInt($impDay));
 
         // Ad Spot = impression ÷ multiplier
         $multiplier = max(1, (int) ($get('kpi_multiplier') ?? 2));
-        $set('est_ad_spot', $impression > 0 ? (int) round($impression / $multiplier) : 0);
+        $adSpot     = $impression > 0 ? (int) round($impression / $multiplier) : 0;
+        $set('est_ad_spot', static::fmtInt($adSpot));
     }
 }
