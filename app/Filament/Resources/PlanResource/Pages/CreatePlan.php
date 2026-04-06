@@ -223,7 +223,11 @@ class CreatePlan extends CreateRecord
                 ->schema([
                     Forms\Components\Repeater::make('line_items')
                         ->label('')
-                        ->schema(LineItemSchema::schema(withNotes: true, withHidden: true))
+                        ->schema(LineItemSchema::schema(
+                            buyingModel: $brief?->buying_model ?? 'io',
+                            withNotes: true,
+                            withHidden: true,
+                        ))
                         ->addActionLabel('+ Thêm line item')
                         ->cloneable()
                         ->reorderable()

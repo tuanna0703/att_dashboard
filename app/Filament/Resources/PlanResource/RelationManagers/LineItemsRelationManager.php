@@ -47,7 +47,10 @@ class LineItemsRelationManager extends RelationManager
                 ->nullable()
                 ->placeholder('— Không liên kết (item mới) —')
                 ->columnSpanFull(),
-        ], LineItemSchema::schema(withNotes: true)));
+        ], LineItemSchema::schema(
+            buyingModel: $plan->brief?->buying_model ?? 'io',
+            withNotes: true,
+        )));
     }
 
     public function table(Table $table): Table

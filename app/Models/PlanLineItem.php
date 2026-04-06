@@ -14,6 +14,8 @@ class PlanLineItem extends Model
         'created_by',
         'source',
         'format',
+        'platform',
+        'placement',
         'targeting',
         // Location
         'city',
@@ -101,32 +103,51 @@ class PlanLineItem extends Model
     protected static function booted(): void
     {
         $calc = function (PlanLineItem $item) {
-            // Total weeks
-            if ($item->buy_weeks !== null) {
-                $item->total_weeks = (int) $item->buy_weeks + (int) ($item->foc_weeks ?? 0);
+            $buyingModel = $item->plan?->brief?->buying_model ?? 'io';
+
+            if ($buyingModel === 'cpm') {
+                // ── CPM mode ─────────────────────────────────────────────
+                // NET = guaranteed_units × unit_cost
+                if ($item->guaranteed_units !== null && $item->unit_cost !== null) {
+                    $item->line_budget = (float) $item->guaranteed_units * (float) $item->unit_cost;
+                }
+                // Impression = guaranteed_units × 1000
+                if ($item->guaranteed_units) {
+                    $item->est_impression = (int) $item->guaranteed_units * 1000;
+                }
+                // Impression/day = impression ÷ live_days
+                if ($item->est_impression && $item->live_days) {
+                    $item->est_impression_day = (int) round($item->est_impression / $item->live_days);
+                }
+                // Ad Spot = impression ÷ multiplier
+                $multiplier = max(1, (int) ($item->kpi_multiplier ?? 1));
+                if ($item->est_impression) {
+                    $item->est_ad_spot = (int) round($item->est_impression / $multiplier);
+                }
+            } else {
+                // ── I/O Booking mode ─────────────────────────────────────
+                // Total weeks
+                if ($item->buy_weeks !== null) {
+                    $item->total_weeks = (int) $item->buy_weeks + (int) ($item->foc_weeks ?? 0);
+                }
+                // NET = qty_location × buy_weeks × unit_cost
+                if ($item->unit_cost !== null && $item->buy_weeks !== null) {
+                    $qty = max(1, (int) ($item->qty_location ?? 1));
+                    $item->line_budget = $qty * (int) $item->buy_weeks * (float) $item->unit_cost;
+                }
+                // Ad Spots = daily_spots × qty_screen × total_weeks × 7
+                if ($item->daily_spots && $item->qty_screen && $item->total_weeks) {
+                    $item->est_ad_spot = (int) $item->daily_spots * (int) $item->qty_screen * (int) $item->total_weeks * 7;
+                }
+                // Impression = ad_spot × multiplier
+                if ($item->est_ad_spot && $item->kpi_multiplier) {
+                    $item->est_impression = (int) $item->est_ad_spot * (int) $item->kpi_multiplier;
+                }
             }
 
-            // NET line_budget = qty_location × buy_weeks × unit_cost
-            if ($item->unit_cost !== null && $item->buy_weeks !== null) {
-                $qty = max(1, (int) ($item->qty_location ?? 1));
-                $item->line_budget = $qty * (int) $item->buy_weeks * (float) $item->unit_cost;
-            } elseif ($item->guaranteed_units !== null && $item->unit_cost !== null) {
-                $item->line_budget = (float) $item->guaranteed_units * (float) $item->unit_cost;
-            }
-
-            // GROSS = NET × (1 + VAT%)
+            // GROSS = NET × (1 + VAT%) — shared
             $vatRate = (float) ($item->vat_rate ?? 8);
-            $item->gross_amount = (float) $item->line_budget * (1 + $vatRate / 100);
-
-            // KPI: est_ad_spot = daily_spots × qty_screen × total_weeks × 7
-            if ($item->daily_spots && $item->qty_screen && $item->total_weeks) {
-                $item->est_ad_spot = (int) $item->daily_spots * (int) $item->qty_screen * (int) $item->total_weeks * 7;
-            }
-
-            // est_impression = est_ad_spot × kpi_multiplier
-            if ($item->est_ad_spot && $item->kpi_multiplier) {
-                $item->est_impression = (int) $item->est_ad_spot * (int) $item->kpi_multiplier;
-            }
+            $item->gross_amount = (float) ($item->line_budget ?? 0) * (1 + $vatRate / 100);
         };
 
         static::creating($calc);

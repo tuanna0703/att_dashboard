@@ -11,6 +11,8 @@ class BookingLineItem extends Model
         'booking_id',
         'plan_line_item_id',
         'format',
+        'platform',
+        'placement',
         'targeting',
         'targeting_names',
         // Location

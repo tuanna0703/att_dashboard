@@ -62,10 +62,24 @@ class BriefResource extends Resource
             ]),
 
             Forms\Components\Section::make('Line Items')->schema([
+                Forms\Components\Select::make('buying_model')
+                    ->label('Loại mua')
+                    ->options([
+                        'io'  => 'I/O Booking (OOH)',
+                        'cpm' => 'CPM (Programmatic)',
+                    ])
+                    ->default('io')
+                    ->required()
+                    ->live()
+                    ->columnSpanFull(),
+
                 Forms\Components\Repeater::make('briefLineItems')
                     ->relationship('briefLineItems')
                     ->label('')
-                    ->schema(LineItemSchema::schema(withNotes: true))
+                    ->schema(fn (Get $get) => LineItemSchema::schema(
+                        buyingModel: $get('buying_model') ?? 'io',
+                        withNotes: true,
+                    ))
                     ->addActionLabel('+ Thêm line item')
                     ->defaultItems(0)
                     ->reorderable('sort_order')

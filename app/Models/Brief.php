@@ -22,6 +22,7 @@ class Brief extends Model
         'campaign_name',
         'budget',
         'currency',
+        'buying_model',
         'status',
         'current_revision_id',
         'note',

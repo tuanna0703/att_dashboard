@@ -238,6 +238,8 @@ class PlanResource extends Resource
                 'booking_id'         => $booking->id,
                 'plan_line_item_id'  => $item->id,
                 'format'             => $item->format,
+                'platform'           => $item->platform,
+                'placement'          => $item->placement,
                 'targeting'          => $networkIds,
                 'targeting_names'    => $networkNames,
                 // Location

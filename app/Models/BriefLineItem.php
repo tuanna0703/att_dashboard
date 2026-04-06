@@ -10,6 +10,8 @@ class BriefLineItem extends Model
     protected $fillable = [
         'brief_id',
         'format',
+        'platform',
+        'placement',
         'targeting',
         // Location
         'city',
