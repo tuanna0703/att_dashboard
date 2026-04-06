@@ -51,6 +51,7 @@ class RolePermissionSeeder extends Seeder
         // Media Buying Order
         'media_buying_orders.viewAny', 'media_buying_orders.view',
         'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
+        'media_buying_orders.approve_dept', 'media_buying_orders.approve_finance',
         // Màn hình (Screens)
         'screens.viewAny', 'screens.create', 'screens.update', 'screens.delete',
     ];
@@ -95,6 +96,7 @@ class RolePermissionSeeder extends Seeder
             'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
+            'media_buying_orders.approve_dept',
         ]);
 
         // ─── Finance Manager: Full finance + duyệt MBO cấp 2 ────────────────
@@ -119,6 +121,7 @@ class RolePermissionSeeder extends Seeder
             'plans.viewAny', 'plans.view',
             'bookings.viewAny', 'bookings.view',
             'media_buying_orders.viewAny', 'media_buying_orders.view',
+            'media_buying_orders.approve_finance',
         ]);
 
         // ─── Finance Staff: Thao tác cơ bản + xem booking ───────────────────
@@ -166,6 +169,21 @@ class RolePermissionSeeder extends Seeder
             'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
         ]);
 
+        // ─── MBO Manager: Duyệt MBO, quản lý media buying ─────────────────────
+        $mboManager = Role::firstOrCreate(['name' => 'mbo_manager', 'guard_name' => 'web']);
+        $mboManager->syncPermissions([
+            'customers.viewAny', 'customers.view',
+            'contracts.viewAny', 'contracts.view',
+            'ad_networks.viewAny',
+            'screens.viewAny',
+            'briefs.viewAny', 'briefs.view',
+            'plans.viewAny', 'plans.view',
+            'bookings.viewAny', 'bookings.view',
+            'media_buying_orders.viewAny', 'media_buying_orders.view',
+            'media_buying_orders.create', 'media_buying_orders.update', 'media_buying_orders.delete',
+            'media_buying_orders.approve_dept',
+        ]);
+
         // ─── Media Buyer: Nhận MBO, thực thi mua inventory ───────────────────
         $mediaBuyer = Role::firstOrCreate(['name' => 'media_buyer', 'guard_name' => 'web']);
         $mediaBuyer->syncPermissions([
@@ -195,7 +213,7 @@ class RolePermissionSeeder extends Seeder
         $this->seedDefaultUsers($financeDept, $salesDept, $adsDept);
 
         $this->command->info('✅ Roles, Permissions, Departments, và default users đã được tạo.');
-        $allRoles = ['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff', 'sale', 'adops', 'media_buyer'];
+        $allRoles = ['ceo', 'coo', 'vice_ceo', 'finance_manager', 'finance_staff', 'sale', 'adops', 'mbo_manager', 'media_buyer'];
         $this->command->table(
             ['Role', 'Permissions'],
             collect($allRoles)->map(fn ($r) => [

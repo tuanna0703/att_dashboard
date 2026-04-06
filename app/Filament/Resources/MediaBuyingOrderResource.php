@@ -265,7 +265,7 @@ class MediaBuyingOrderResource extends Resource
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->visible(fn (MediaBuyingOrder $r) => $r->status === 'pending_dept'
-                            && auth()->user()->hasAnyRole(['coo', 'vice_ceo', 'ceo']))
+                            && auth()->user()->hasPermissionTo('media_buying_orders.approve_dept'))
                         ->requiresConfirmation()
                         ->action(function (MediaBuyingOrder $r) {
                             $r->update([
@@ -282,7 +282,7 @@ class MediaBuyingOrderResource extends Resource
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->visible(fn (MediaBuyingOrder $r) => $r->status === 'pending_dept'
-                            && auth()->user()->hasAnyRole(['coo', 'vice_ceo', 'ceo']))
+                            && auth()->user()->hasPermissionTo('media_buying_orders.approve_dept'))
                         ->form([
                             Forms\Components\Textarea::make('rejection_reason')
                                 ->label('Lý do từ chối')->required()->rows(3),
@@ -310,7 +310,7 @@ class MediaBuyingOrderResource extends Resource
                         ->icon('heroicon-o-check-circle')
                         ->color('success')
                         ->visible(fn (MediaBuyingOrder $r) => $r->status === 'pending_finance'
-                            && auth()->user()->hasAnyRole(['finance_manager', 'ceo']))
+                            && auth()->user()->hasPermissionTo('media_buying_orders.approve_finance'))
                         ->requiresConfirmation()
                         ->action(function (MediaBuyingOrder $r) {
                             $r->update([
@@ -330,7 +330,7 @@ class MediaBuyingOrderResource extends Resource
                         ->icon('heroicon-o-x-circle')
                         ->color('danger')
                         ->visible(fn (MediaBuyingOrder $r) => $r->status === 'pending_finance'
-                            && auth()->user()->hasAnyRole(['finance_manager', 'ceo']))
+                            && auth()->user()->hasPermissionTo('media_buying_orders.approve_finance'))
                         ->form([
                             Forms\Components\Textarea::make('rejection_reason')
                                 ->label('Lý do từ chối')->required()->rows(3),
